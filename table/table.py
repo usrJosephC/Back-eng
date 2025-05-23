@@ -9,5 +9,7 @@ table = pd.read_csv(csv_path)
 # and that the year column is not empty
 table['YEAR'] = pd.to_numeric(table['YEAR'], errors='coerce')
 
-chosen_year = 1946 # has to come from frontend
-filtered_table = table[table['YEAR'] >= chosen_year]
+def filter_by_year(year: int):
+    '''filters the table by the year provided by the user.'''
+    filtered = table[table['YEAR'] >= year]
+    return filtered.to_dict(orient='list')
