@@ -1,37 +1,28 @@
-import os
-import sys
-import spotipy
-from dotenv import load_dotenv
-from spotipy.oauth2 import SpotifyOAuth
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from table.table import filtered_table
+from table.table import filter_by_year
+from .spotify_auth import sp
 
+def get_info(year: int):
+    '''returns a dictionary with the song information starting from the year
+     provided by the user.'''
 
-load_dotenv()
+    info = {}
+    filtered_table = filter_by_year(year)
+    year = int(filtered_table['YEAR'][0])
 
-client_id = os.getenv('CLIENT_ID')
-client_secret = os.getenv('CLIENT_SECRET')
-redirect_uri = os.getenv('REDIRECT_URI')
+    for uri in filtered_table['URI']:
+        track = sp.track(uri)
 
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
-                                               client_secret=client_secret,
-                                               redirect_uri=redirect_uri,
-                                               scope="user-library-read"))
+        artist_name = track['artists'][0]['name']
+        song_name = track['name']
+        song_img = track['album']['images'][0]['url']
 
-info = {}
-year = int(filtered_table['YEAR'][0])
+        info[year] = {
+            'artist_name': artist_name,
+            'song_name': song_name,
+            'song_img': song_img
+        }
 
-for uri in filtered_table['URI']:
-    track = sp.track(uri)
+        year += 1
 
-    artist_name = track['artists'][0]['name']
-    song_name = track['name']
-    song_img = track['album']['images'][0]['url']
-
-    info[year] = {
-        'artist_name': artist_name,
-        'song_name': song_name,
-        'song_img': song_img
-    }
-
-    year += 1
+    return info
+    
