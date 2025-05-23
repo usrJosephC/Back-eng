@@ -37,7 +37,7 @@ def make_playlist():
     
     try:
         create_playlist('Your time travel', songs_uri)
-        return jsonify({'message': 'Playlist created successfully'}), 200
+        return jsonify({'message': 'Playlist created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
