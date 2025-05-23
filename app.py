@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from spotify_requests.create_playlist import create_playlist
 from spotify_requests.get_info import get_info
+from table.table import table
 
 app = Flask(__name__)
 CORS(app)
@@ -21,6 +23,23 @@ def receive_year():
 
     result = get_info(year)
     return jsonify(result)
+
+@app.route('/playlist', methods=['POST'])
+def make_playlist():
+    '''receives the songs from the user and creates a playlist'''
+    data = request.get_json()
+    years_of_songs = data.get('chosen_years')
+    if not years_of_songs:
+        return jsonify({'error': 'No songs provided'}), 400
+
+    filtered = table[table['YEAR'].isin(years_of_songs)]
+    songs_uri = filtered['URI'].tolist()
+    
+    try:
+        create_playlist('Your time travel', songs_uri)
+        return jsonify({'message': 'Playlist created successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
     app.run(debug=True)
