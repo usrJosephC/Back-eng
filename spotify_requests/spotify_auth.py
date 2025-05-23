@@ -1,0 +1,20 @@
+import os
+import sys
+import spotipy
+from dotenv import load_dotenv
+from spotipy.oauth2 import SpotifyOAuth
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+load_dotenv()
+
+client_id = os.getenv('CLIENT_ID')
+client_secret = os.getenv('CLIENT_SECRET')
+redirect_uri = os.getenv('REDIRECT_URI')
+
+if os.path.exists('.cache'):
+    os.remove('.cache')
+
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
+                                               client_secret=client_secret,
+                                               redirect_uri=redirect_uri,
+                                               scope="playlist-modify-public"))
