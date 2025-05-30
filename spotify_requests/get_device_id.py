@@ -1,17 +1,25 @@
 from .spotify_auth import sp
 
 def get_device_id():
-    '''get the device id using the Spotify API'''
+    '''Obtém o primeiro dispositivo disponível do Spotify'''
     try:
-        devices = sp.devices()
-        if devices['devices']:
-            device_id = devices['devices'][0]['id']
-            print(f"Device ID: {device_id}")
-            return device_id
-        else:
-            print("No devices found.")
+        devices = sp.devices().get('devices', [])
+        
+        if not devices:
+            print("⚠️ Nenhum dispositivo encontrado! Por favor:")
+            print("1. Abra o Spotify Web Player")
+            print("2. Comece a tocar qualquer música manualmente")
+            print("3. Tente novamente em 10 segundos")
             return None
-    except Exception as e:
-        print(f"An error occurred while trying to get the device ID: {e}")
-        return None
+        
+        # Tenta encontrar um dispositivo ativo primeiro
+        active_devices = [d for d in devices if d.get('is_active')]
+        if active_devices:
+            return active_devices[0]['id']
+        
+        # Retorna o primeiro dispositivo disponível
+        return devices[0]['id']
     
+    except Exception as e:
+        print(f"🚨 Erro ao buscar dispositivos: {e}")
+        return None
