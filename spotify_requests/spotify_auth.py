@@ -24,4 +24,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
                                                "user-library-modify " \
                                                "user-read-currently-playing " \
                                                "user-read-playback-position " \
-                                               "user-read-recently-played"))
+                                               "user-read-recently-played " \
+                                               "streaming"))
+
