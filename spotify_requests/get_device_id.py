@@ -1,6 +1,4 @@
-from .spotify_auth import sp
-
-def get_device_id():
+def get_device_id(sp):
     '''Obtém o primeiro dispositivo disponível do Spotify'''
     try:
         devices = sp.devices().get('devices', [])
@@ -23,3 +21,4 @@ def get_device_id():
     except Exception as e:
         print(f"🚨 Erro ao buscar dispositivos: {e}")
         return None
+    
