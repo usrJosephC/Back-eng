@@ -8,6 +8,7 @@ from spotify_requests.play_music import play_music
 from spotify_requests.spotify_auth import spotify_auth
 from spotify_requests.get_song_id import get_song_id
 from spotify_requests.get_device_id import get_device_id
+from spotify_requests.previous_track import previous_track
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -73,7 +74,7 @@ def receive_year():
 def play():
     '''plays the songs starting from the year provided by the user'''
 
-    songs = get_song_id(sp_auth, session.get('year'))
+    songs = get_song_id(session.get('year'))
 
     uris_list = [f'spotify:track:{track_id}' for track_id in songs.values()]
     # device_id = session.get('device_id')
@@ -84,6 +85,18 @@ def play():
         return jsonify({'message': 'Music is playing!'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to play music: {e}'}), 500
+    
+@app.route('/previous', methods=['GET'])
+def previous():
+    '''skips to the previous song in the playlist'''
+
+    # device_id = session.get('device_id')
+    device_id = get_device_id(sp_auth)
+    try:
+        previous_track(sp_auth, device_id)
+        return jsonify({'message': 'Skipped to previous track'}), 200
+    except Exception as e:
+        return jsonify({'error': f'An error occurred while trying to skip to previous track: {e}'}), 500
 
 @app.route('/playlist', methods=['POST'])
 def make_playlist():
