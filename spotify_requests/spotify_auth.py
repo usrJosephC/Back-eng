@@ -12,9 +12,6 @@ def spotify_auth():
     client_secret = os.getenv('CLIENT_SECRET')
     redirect_uri = os.getenv('REDIRECT_URI')
 
-    if os.path.exists('.cache'):
-        os.remove('.cache')
-
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
                                                 client_secret=client_secret,
                                                 redirect_uri=redirect_uri,
