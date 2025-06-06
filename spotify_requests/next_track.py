@@ -1,15 +1,10 @@
-from .spotify_auth import sp
-from .get_device_id import get_device_id
-
-def next_track(device_id: str):
+def next_track(sp, device_id: str):
+    '''skip to the next track on the Spotify device'''
     if not device_id:
-        print("❌ Não foi possível encontrar dispositivo!")
+        print("An error occurred: No device ID found.")
         return
 
     try:
         sp.next_track(device_id)
-        print(f"⏭️ Próxima música no dispositivo {device_id[:5]}")
     except Exception as e:
-        print(f"🚨 Erro ao avançar: {e}")
-
-next_track(get_device_id())
+        print(f"An error occurred while trying to skip to the next track: {e}")
