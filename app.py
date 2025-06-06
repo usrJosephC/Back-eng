@@ -10,6 +10,7 @@ from spotify_requests.get_song_id import get_song_id
 from spotify_requests.get_device_id import get_device_id
 from spotify_requests.previous_track import previous_track
 from spotify_requests.pause_music import pause_music
+from spotify_requests.next_track import next_track
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -88,8 +89,8 @@ def play():
         return jsonify({'error': f'An error occurred while trying to play music: {e}'}), 500
     
 @app.route('/previous', methods=['GET'])
-def previous():
-    '''skips to the previous song in the playlist'''
+def play_previous():
+    '''skips to the previous song in the list'''
 
     # device_id = session.get('device_id')
     device_id = get_device_id(sp_auth)
@@ -100,7 +101,7 @@ def previous():
         return jsonify({'error': f'An error occurred while trying to skip to previous track: {e}'}), 500
 
 @app.route('/pause', methods=['GET'])
-def pause():
+def pause_current():
     '''pauses the currently playing song'''
 
     # device_id = session.get('device_id')
@@ -110,6 +111,18 @@ def pause():
         return jsonify({'message': 'Playback paused'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to pause playback: {e}'}), 500
+    
+@app.route('/next', methods=['GET'])
+def play_next():
+    '''skips to the next song in the list'''
+    
+    # device_id = session.get('device_id')
+    device_id = get_device_id(sp_auth)
+    try:
+        next_track(sp_auth, device_id)
+        return jsonify({'message': 'Skipped to next track'}), 200
+    except Exception as e:
+        return jsonify({'error': f'An error occurred while trying to skip to next track: {e}'}), 500
 
 @app.route('/playlist', methods=['POST'])
 def make_playlist():
