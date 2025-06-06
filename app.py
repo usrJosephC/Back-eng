@@ -1,20 +1,22 @@
 import os
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
-from spotify_requests.create_playlist import create_playlist
-from spotify_requests.get_info import get_info
+
 from table.table import table
-from spotify_requests.play_music import play_music
+
 from spotify_requests.spotify_auth import spotify_auth
-from spotify_requests.get_song_id import get_song_id
+from spotify_requests.get_info import get_info
 from spotify_requests.get_device_id import get_device_id
+from spotify_requests.get_song_id import get_song_id
+from spotify_requests.play_music import play_music
 from spotify_requests.previous_track import previous_track
 from spotify_requests.pause_music import pause_music
 from spotify_requests.next_track import next_track
+from spotify_requests.create_playlist import create_playlist
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-app.secret_key = os.urandom(24)  # Generate a random secret key for session management
+app.secret_key = os.urandom(24)  # generates a random secret key for session management
 
 sp_auth = spotify_auth()
 
@@ -89,7 +91,7 @@ def play():
         return jsonify({'error': f'An error occurred while trying to play music: {e}'}), 500
     
 @app.route('/previous', methods=['GET'])
-def play_previous():
+def previous():
     '''skips to the previous song in the list'''
 
     # device_id = session.get('device_id')
@@ -101,7 +103,7 @@ def play_previous():
         return jsonify({'error': f'An error occurred while trying to skip to previous track: {e}'}), 500
 
 @app.route('/pause', methods=['GET'])
-def pause_current():
+def pause():
     '''pauses the currently playing song'''
 
     # device_id = session.get('device_id')
