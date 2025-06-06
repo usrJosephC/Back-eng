@@ -1,7 +1,6 @@
 import spotipy
-from .spotify_auth import sp
 
-def create_playlist(playlist_name: str, song_uris: list):
+def create_playlist(sp, playlist_name: str, song_uris: list):
     '''creates a playlist with the name provided by the user and adds the songs
     provided by the user.'''
     try:

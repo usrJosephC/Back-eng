@@ -1,7 +1,6 @@
 from table.table import filter_by_year
-from .spotify_auth import sp
 
-def get_info(year: int):
+def get_info(sp, year: int):
     '''returns a dictionary with the song information starting from the year
      provided by the user.'''
 
@@ -25,4 +24,3 @@ def get_info(year: int):
         year += 1
 
     return info
-    
