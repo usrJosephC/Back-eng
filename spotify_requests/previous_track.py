@@ -1,15 +1,10 @@
-from .spotify_auth import sp
-from .get_device_id import get_device_id
-
-def previous_track(device_id: str):
+def previous_track(sp, device_id: str):
+    '''go to the previous track on the Spotify device'''
     if not device_id:
-        print("❌ Dispositivo não encontrado!")
+        print("An error occurred: No device ID found.")
         return
 
     try:
         sp.previous_track(device_id=device_id)
-        print(f"⏮️ Voltando para música anterior")
     except Exception as e:
-        print(f"🚨 Erro ao voltar: {e}")
-
-previous_track(get_device_id())
+        print(f"Error while trying to go to the previous track: {e}")
