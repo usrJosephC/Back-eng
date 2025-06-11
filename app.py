@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, redirect, url_for
 from flask_cors import CORS
 
 from table.table import table
@@ -25,18 +25,24 @@ def index():
     '''returns a message to check if the server is running'''
     return jsonify({'message': 'Server is running!'}), 200
 
-@app.route('/login', methods=['POST'])
-def send_token(sp=sp_auth):
-    '''sends the access token to the frontend so it can create the Spotify player'''
-    try:
-        token_info = sp.auth_manager.get_access_token()
-        if token_info:
-            return jsonify({'access_token': token_info['access_token']}), 201
-        else:
-            return jsonify({'error': 'Token could not be found.'}), 500
-    except Exception as e:
-        return jsonify({'error': f'An error {e} occurred while trying to get the token.'}), 500
+@app.route('/login')
+def login():
+    auth_url = sp_auth.auth_manager.get_authorize_url()
+    return redirect(auth_url)
 
+@app.route('/callback')
+def callback():
+    '''handles the callback from Spotify after user authentication'''
+    code = request.args.get('code')
+    if not code:
+        return jsonify({'error': 'No code provided'}), 400
+
+    try:
+        token_info = sp_auth.auth_manager.get_access_token(code)
+        session['token_info'] = token_info
+        return jsonify({'message': 'Authentication successful! You can now use the app.'}), 200
+    except Exception as e:
+        return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
 
 @app.route('/device', methods=['POST'])
 def receive_device_id():
