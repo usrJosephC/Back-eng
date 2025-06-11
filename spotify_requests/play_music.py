@@ -1,4 +1,4 @@
-from .spotify_auth import spotify_auth
+from .spotify_client import spotify_client
 from .get_device_id import get_device_id
 
 def play_music(sp, uris: list, device: str):
