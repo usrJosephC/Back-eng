@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request, session, redirect, url_for
+from flask import Flask, jsonify, request, session, redirect
 from flask_cors import CORS
 
 from table.table import table
