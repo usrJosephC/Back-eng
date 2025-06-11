@@ -7,7 +7,7 @@ from table.table import table
 from spotify_requests.auth_manager import auth_manager
 from spotify_requests.spotify_client import spotify_client
 from spotify_requests.get_info import get_info
-from spotify_requests.get_device_id import get_device_id
+# from spotify_requests.get_device_id import get_device_id
 from spotify_requests.get_song_id import get_song_id
 from spotify_requests.play_music import play_music
 from spotify_requests.previous_track import previous_track
@@ -20,7 +20,6 @@ CORS(app, supports_credentials=True)
 app.secret_key = os.urandom(24)  # generates a random secret key for session management
 
 sp_oauth = auth_manager()
-sp_client = spotify_client()
 
 @app.route('/', methods=['GET'])
 def index():
@@ -83,6 +82,14 @@ def receive_year():
         year = int(year)
     except ValueError:
         return jsonify({'error': 'Year must be an integer'}), 400
+    
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
 
     # uses the get_info function to retrieve songs from the specified year
     if 1946 <= year <= 2024:
@@ -99,8 +106,17 @@ def play():
     songs = get_song_id(session.get('year'))
 
     uris_list = [f'spotify:track:{track_id}' for track_id in songs.values()]
-    # device_id = session.get('device_id')
-    device_id = get_device_id(sp_client)
+    
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
+
+    device_id = session.get('device_id')
+    # device_id = get_device_id(sp_client)
 
     try:
         play_music(sp_client, uris_list, device_id)
@@ -112,8 +128,17 @@ def play():
 def previous():
     '''skips to the previous song in the list'''
 
-    # device_id = session.get('device_id')
-    device_id = get_device_id(sp_client)
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
+
+    device_id = session.get('device_id')
+    # device_id = get_device_id(sp_client)
+
     try:
         previous_track(sp_client, device_id)
         return jsonify({'message': 'Skipped to previous track'}), 200
@@ -124,8 +149,17 @@ def previous():
 def pause():
     '''pauses the currently playing song'''
 
-    # device_id = session.get('device_id')
-    device_id = get_device_id(sp_client)
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
+
+    device_id = session.get('device_id')
+    # device_id = get_device_id(sp_client)
+
     try:
         pause_music(sp_client, device_id)
         return jsonify({'message': 'Playback paused'}), 200
@@ -136,8 +170,17 @@ def pause():
 def play_next():
     '''skips to the next song in the list'''
     
-    # device_id = session.get('device_id')
-    device_id = get_device_id(sp_client)
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
+
+    device_id = session.get('device_id')
+    # device_id = get_device_id(sp_client)
+
     try:
         next_track(sp_client, device_id)
         return jsonify({'message': 'Skipped to next track'}), 200
@@ -154,6 +197,14 @@ def make_playlist():
 
     filtered = table[table['YEAR'].isin(years_of_songs)]
     songs_uri = filtered['URI'].tolist()
+
+    # default code block to guarantee that the user is authenticated
+    token_info = session.get('token_info')
+    if not token_info:
+        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
+    
+    sp_client, new_token_info = spotify_client(token_info)
+    session['token_info'] = new_token_info
     
     try:
         create_playlist(sp_client, 'Your time travel', songs_uri)
