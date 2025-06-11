@@ -1,6 +1,3 @@
-from .spotify_auth import spotify_auth
-from .get_device_id import get_device_id
-
 def play_music(sp, uris: list, device: str):
     '''play music using the Spotify API'''
     try:

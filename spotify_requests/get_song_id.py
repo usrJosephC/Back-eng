@@ -4,13 +4,17 @@ def get_song_id(year: int):
     '''returns a dictionary with the song ids starting from the year
      provided by the user.'''
 
-    songs = {}
     filtered_table = filter_by_year(year)
-    year = int(filtered_table['YEAR'][0])
+
+    if not filtered_table['YEAR'] or not filtered_table['URI']:
+        return {}
+    
+    songs = {}
+    chosen_year = int(filtered_table['YEAR'][0])
 
     for uri in filtered_table['URI']:
-        songs[year] = uri
+        songs[chosen_year] = uri
 
-        year += 1
+        chosen_year += 1
 
     return songs
