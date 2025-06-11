@@ -23,6 +23,7 @@ def spotify_auth():
                                                         "user-read-currently-playing " \
                                                         "user-read-playback-position " \
                                                         "user-read-recently-played " \
-                                                        "streaming"))
+                                                        "streaming",
+                                                cache_path=None))
     
     return sp
