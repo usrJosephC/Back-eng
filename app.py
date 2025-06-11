@@ -17,7 +17,13 @@ from spotify_requests.create_playlist import create_playlist
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-app.secret_key = os.urandom(24)  # generates a random secret key for session management
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
+app.config.update(
+    SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
+    SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
+    SESSION_COOKIE_SECURE=True,  # true since we use HTTPS, is secure
+    SESSION_COOKIE_SAMESITE='None'  # since our frontend and backend are on different domains
+)
 
 sp_oauth = auth_manager()
 
@@ -26,13 +32,13 @@ def index():
     '''returns a message to check if the server is running'''
     return jsonify({'message': 'Server is running!'}), 200
 
-@app.route('/login')
+@app.route('/login', methods=['GET'])
 def login():
     '''redirects the user to Spotify's authentication page'''
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
-@app.route('/callback')
+@app.route('/callback', methods=['GET'])
 def callback():
     '''handles the callback from Spotify after user authentication'''
     code = request.args.get('code')
@@ -46,7 +52,7 @@ def callback():
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
     
-@app.route('/token')
+@app.route('/token', methods=['GET'])
 def send_token():
     '''returns the access token to the frontend if it exists in the session'''
     token_info = session.get('token_info', None)
