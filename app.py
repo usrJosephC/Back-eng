@@ -4,7 +4,8 @@ from flask_cors import CORS
 
 from table.table import table
 
-from spotify_requests.spotify_auth import spotify_auth
+from spotify_requests.auth_manager import auth_manager
+from spotify_requests.spotify_client import spotify_client
 from spotify_requests.get_info import get_info
 from spotify_requests.get_device_id import get_device_id
 from spotify_requests.get_song_id import get_song_id
@@ -18,7 +19,8 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.secret_key = os.urandom(24)  # generates a random secret key for session management
 
-sp_auth = spotify_auth()
+sp_oauth = auth_manager()
+sp_client = spotify_client()
 
 @app.route('/', methods=['GET'])
 def index():
@@ -27,7 +29,7 @@ def index():
 
 @app.route('/login')
 def login():
-    auth_url = sp_auth.auth_manager.get_authorize_url()
+    auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 @app.route('/callback')
@@ -38,11 +40,20 @@ def callback():
         return jsonify({'error': 'No code provided'}), 400
 
     try:
-        token_info = sp_auth.auth_manager.get_access_token(code)
+        token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
         return jsonify({'message': 'Authentication successful! You can now use the app.'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
+    
+@app.route('/token')
+def send_token():
+    '''returns the access token to the frontend if it exists in the session'''
+    token_info = session.get('token_info', None)
+    if token_info and 'access_token' in token_info:
+        return jsonify({'access_token': token_info['access_token']}), 200
+    else:
+        return jsonify({'error': 'No valid token found.'}), 401
 
 @app.route('/device', methods=['POST'])
 def receive_device_id():
@@ -74,7 +85,7 @@ def receive_year():
 
     # uses the get_info function to retrieve songs from the specified year
     if 1946 <= year <= 2024:
-        result = get_info(sp_auth, year)
+        result = get_info(sp_client, year)
     else:
         return jsonify({'error': 'Year must be between 1946 and 2024'}), 400
 
@@ -88,10 +99,10 @@ def play():
 
     uris_list = [f'spotify:track:{track_id}' for track_id in songs.values()]
     # device_id = session.get('device_id')
-    device_id = get_device_id(sp_auth)
+    device_id = get_device_id(sp_client)
 
     try:
-        play_music(sp_auth, uris_list, device_id)
+        play_music(sp_client, uris_list, device_id)
         return jsonify({'message': 'Music is playing!'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to play music: {e}'}), 500
@@ -101,9 +112,9 @@ def previous():
     '''skips to the previous song in the list'''
 
     # device_id = session.get('device_id')
-    device_id = get_device_id(sp_auth)
+    device_id = get_device_id(sp_client)
     try:
-        previous_track(sp_auth, device_id)
+        previous_track(sp_client, device_id)
         return jsonify({'message': 'Skipped to previous track'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to skip to previous track: {e}'}), 500
@@ -113,9 +124,9 @@ def pause():
     '''pauses the currently playing song'''
 
     # device_id = session.get('device_id')
-    device_id = get_device_id(sp_auth)
+    device_id = get_device_id(sp_client)
     try:
-        pause_music(sp_auth, device_id)
+        pause_music(sp_client, device_id)
         return jsonify({'message': 'Playback paused'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to pause playback: {e}'}), 500
@@ -125,9 +136,9 @@ def play_next():
     '''skips to the next song in the list'''
     
     # device_id = session.get('device_id')
-    device_id = get_device_id(sp_auth)
+    device_id = get_device_id(sp_client)
     try:
-        next_track(sp_auth, device_id)
+        next_track(sp_client, device_id)
         return jsonify({'message': 'Skipped to next track'}), 200
     except Exception as e:
         return jsonify({'error': f'An error occurred while trying to skip to next track: {e}'}), 500
@@ -144,7 +155,7 @@ def make_playlist():
     songs_uri = filtered['URI'].tolist()
     
     try:
-        create_playlist(sp_auth, 'Your time travel', songs_uri)
+        create_playlist(sp_client, 'Your time travel', songs_uri)
         return jsonify({'message': 'Playlist created successfully'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
