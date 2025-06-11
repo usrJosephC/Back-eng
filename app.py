@@ -29,6 +29,7 @@ def index():
 
 @app.route('/login')
 def login():
+    '''redirects the user to Spotify's authentication page'''
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
