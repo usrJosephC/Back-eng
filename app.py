@@ -1,5 +1,7 @@
 import os
+from redis import Redis
 from flask import Flask, jsonify, request, session, redirect
+from flask_session import Session
 from flask_cors import CORS
 
 from table.table import table
@@ -19,11 +21,15 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
+    SESSION_TYPE='redis',  # use Redis for session storage
+    SESSION_REDIS=Redis.from_url(os.getenv("REDIS_URL"), ssl=True),  # connect to Redis using the URL from environment variable
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
     SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
     SESSION_COOKIE_SECURE=True,  # true since we use HTTPS, is secure
     SESSION_COOKIE_SAMESITE='None'  # since our frontend and backend are on different domains
 )
+
+Session(app)  # initialize the session with the Flask app
 
 sp_oauth = auth_manager()
 
