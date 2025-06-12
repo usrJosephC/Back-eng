@@ -23,7 +23,7 @@ CORS(app, origins=['http://localhost:3000', 'https://divebackintime.onrender.com
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
     SESSION_TYPE='redis',  # use Redis for session storage
-    SESSION_REDIS=Redis.from_url(os.getenv("REDIS_URL"), ssl=True),  # connect to Redis using the URL from environment variable
+    SESSION_REDIS=Redis.from_url(os.getenv("REDIS_URL")),  # connect to Redis using the URL from environment variable
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
     SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
     SESSION_COOKIE_SECURE=False,  # true since we use HTTPS, is secure #CHANGED FOR A BIT FOR TESTING
