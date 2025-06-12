@@ -77,8 +77,7 @@ def receive_device_id():
 @app.route('/year', methods=['GET'])
 def receive_year():
     '''receives the year from the frontend and returns the songs from that year until the end of the table'''
-    data = request.get_json()
-    year = data.get('year')
+    year = request.args.get('year')
     session['year'] = year
 
     if not year:
