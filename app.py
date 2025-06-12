@@ -75,7 +75,7 @@ def receive_device_id():
     session['device_id'] = device_id
     return jsonify({'message': 'Device ID stored successfully'}), 200
 
-@app.route('/year', methods=['POST'])
+@app.route('/year', methods=['GET'])
 def receive_year():
     '''receives the year from the frontend and returns the songs from that year until the end of the table'''
     data = request.get_json()
