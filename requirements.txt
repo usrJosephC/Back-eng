@@ -5,4 +5,4 @@ pandas
 python-dotenv
 gunicorn
 Flask-Session
-redis
+redis=='4.5.1'
