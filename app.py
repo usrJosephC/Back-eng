@@ -26,8 +26,6 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='None'  # since our frontend and backend are on different domains
 )
 
-sp_oauth = auth_manager()
-
 @app.route('/', methods=['GET'])
 def index():
     '''returns a message to check if the server is running'''
@@ -36,6 +34,7 @@ def index():
 @app.route('/login', methods=['GET'])
 def login():
     '''redirects the user to Spotify's authentication page'''
+    sp_oauth = auth_manager()
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
@@ -47,6 +46,7 @@ def callback():
         return jsonify({'error': 'No code provided'}), 400
 
     try:
+        sp_oauth = auth_manager()
         token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
         return redirect('/success')
