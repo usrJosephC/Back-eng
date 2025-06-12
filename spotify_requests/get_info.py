@@ -14,11 +14,13 @@ def get_info(sp, year: int):
         artist_name = track['artists'][0]['name']
         song_name = track['name']
         song_img = track['album']['images'][0]['url']
+        track_duration = track['duration_ms']
 
         info[year] = {
             'artist_name': artist_name,
             'song_name': song_name,
-            'song_img': song_img
+            'song_img': song_img,
+            'track_duration': track_duration,
         }
 
         year += 1
