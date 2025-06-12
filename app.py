@@ -48,9 +48,14 @@ def callback():
     try:
         token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
-        return jsonify({'message': 'Authentication successful! You can now use the app.'}), 200
+        return redirect('/success')
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
+    
+@app.route('/success', methods=['GET'])
+def success():
+    '''returns a success message after successful authentication'''
+    return jsonify({'message': 'Authentication successful! You can now close this tab.'}), 200
     
 @app.route('/token', methods=['GET'])
 def send_token():
