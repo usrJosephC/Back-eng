@@ -30,6 +30,8 @@ const SelecionarAno = () => {
         throw new Error('Token inválido recebido do servidor')
       }
 
+      localStorage.setItem('accessToken', accessToken);
+
       const response = await fetch(
           `https://divebackintime.onrender.com/api/year?year=${selectedYear}`,
           {
