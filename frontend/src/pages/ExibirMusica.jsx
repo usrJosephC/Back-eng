@@ -20,34 +20,34 @@ function ExibirMusica() {
   const [songData, setSongData] = useState(null);
   const intervalRef = useRef(null);
 
-  useEffect(() => { 
+  useEffect(() => {
     const fetchToken = async () => {
-    // Tenta recuperar do localStorage
-    const localToken = localStorage.getItem("access_token");
-    if (localToken) return localToken;
-
-    // Se não tiver, tenta buscar do servidor
-    try {
-      const res = await fetch("https://divebackintime.onrender.com/api/token", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Falha ao buscar token");
-      const data = await res.json();
-      if (!data.access_token) throw new Error("Token inválido");
-    
-      // Salva no localStorage para evitar nova requisição
-      localStorage.setItem("access_token", data.access_token);
-
-      return data.access_token;
-    } catch (error) {
-      console.error("Erro ao buscar token:", error);
-      navigate("/");
-      return null;
-    }
-  };
-
+      console.log("Tentando recuperar token...");
+      const localToken = localStorage.getItem("access_token");
+      if (localToken) {
+        console.log("Token recuperado do localStorage.");
+        return localToken;
+      }
+      try {
+        console.log("Buscando token do servidor...");
+        const res = await fetch("https://divebackintime.onrender.com/api/token", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Falha ao buscar token");
+        const data = await res.json();
+        if (!data.access_token) throw new Error("Token inválido");
+        console.log("Token recebido do servidor:", data.access_token);
+        localStorage.setItem("access_token", data.access_token);
+        return data.access_token;
+      } catch (error) {
+        console.error("Erro ao buscar token:", error);
+        navigate("/");
+        return null;
+      }
+    };
 
     const sendDeviceIdToBackend = async (device_id) => {
+      console.log("Enviando device ID para o backend:", device_id);
       try {
         const res = await fetch("https://divebackintime.onrender.com/api/device", {
           method: "POST",
@@ -56,14 +56,20 @@ function ExibirMusica() {
           body: JSON.stringify({ device_id }),
         });
         if (!res.ok) throw new Error("Falha ao enviar device ID");
-      } catch {
+        console.log("Device ID enviado com sucesso.");
+      } catch (error) {
+        console.error("Erro ao enviar device ID:", error);
         navigate("/");
       }
     };
 
     const loadSpotifyPlayer = async () => {
+      console.log("Carregando Spotify Web Playback SDK...");
       const token = await fetchToken();
-      if (!token) return;
+      if (!token) {
+        console.log("Token inválido, abortando criação do player.");
+        return;
+      }
 
       const script = document.createElement("script");
       script.src = "https://sdk.scdn.co/spotify-player.js";
@@ -71,6 +77,7 @@ function ExibirMusica() {
       document.body.appendChild(script);
 
       window.onSpotifyWebPlaybackSDKReady = () => {
+        console.log("Spotify Web Playback SDK pronto. Criando player...");
         const spotifyPlayer = new window.Spotify.Player({
           name: "Dive Back Player",
           getOAuthToken: (cb) => cb(token),
@@ -80,30 +87,45 @@ function ExibirMusica() {
         setPlayer(spotifyPlayer);
 
         spotifyPlayer.addListener("ready", async ({ device_id }) => {
+          console.log("Player pronto! Device ID:", device_id);
           setDeviceId(device_id);
           await sendDeviceIdToBackend(device_id);
         });
 
         spotifyPlayer.addListener("not_ready", ({ device_id }) => {
-          // Pode logar ou tratar se necessário
+          console.log("Player ficou offline. Device ID:", device_id);
         });
 
-        spotifyPlayer.addListener("authentication_error", () => {
+        spotifyPlayer.addListener("authentication_error", (error) => {
+          console.error("Erro de autenticação no player:", error);
           navigate("/");
         });
 
-        spotifyPlayer.addListener("account_error", () => {
-          // Pode tratar se quiser
+        spotifyPlayer.addListener("account_error", (error) => {
+          console.error("Erro na conta Spotify:", error);
         });
 
-        spotifyPlayer.connect();
+        spotifyPlayer.addListener("playback_error", (error) => {
+          console.error("Erro na reprodução:", error);
+        });
+
+        spotifyPlayer.connect().then((success) => {
+          if (success) {
+            console.log("Conectado ao player Spotify com sucesso.");
+          } else {
+            console.error("Falha ao conectar ao player Spotify.");
+          }
+        });
       };
     };
 
     loadSpotifyPlayer();
 
     return () => {
-      if (player) player.disconnect();
+      if (player) {
+        console.log("Desconectando player Spotify...");
+        player.disconnect();
+      }
     };
   }, [navigate]);
 
@@ -161,13 +183,19 @@ function ExibirMusica() {
   const postToBackend = async (endpoint) => {
     if (!deviceId) return false;
     try {
+      console.log(`Enviando requisição para /api/${endpoint}`);
       const res = await fetch(`https://divebackintime.onrender.com/api/${endpoint}`, {
         method: "GET",
         credentials: "include",
       });
-      if (!res.ok) return false;
+      if (!res.ok) {
+        console.error(`Falha na requisição /api/${endpoint}`);
+        return false;
+      }
+      console.log(`Requisição /api/${endpoint} bem-sucedida`);
       return true;
-    } catch {
+    } catch (error) {
+      console.error(`Erro na requisição /api/${endpoint}:`, error);
       return false;
     }
   };
