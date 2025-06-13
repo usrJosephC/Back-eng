@@ -20,6 +20,7 @@ CORS(app, origins='https://divebackintime.onrender.com', supports_credentials=Tr
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
+    SESSION_COOKIE_DOMAIN='backend-divebackintime.onrender.com',
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
     SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
     SESSION_COOKIE_SECURE=True,  # true since we use HTTPS, is secure
