@@ -132,3 +132,9 @@ project/
 ## Contato
 
 Dúvidas, sugestões ou melhorias? Abra uma issue e entre em contato conosco.
+
+
+
+## Licença
+
+Este projeto é open source e está licenciado sob os termos da MIT License.
