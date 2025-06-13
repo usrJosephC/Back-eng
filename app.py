@@ -49,7 +49,7 @@ def callback():
         sp_oauth = auth_manager()
         token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
-        return redirect('https://divebackintime.onrender.com')  # redirect to the frontend after successful authentication
+        return redirect('https://divebackintime.onrender.com/selecionar')  # redirect to the frontend after successful authentication
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
     
