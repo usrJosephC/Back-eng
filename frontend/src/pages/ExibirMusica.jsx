@@ -20,24 +20,35 @@ function ExibirMusica() {
   const [songData, setSongData] = useState(null);
   const intervalRef = useRef(null);
 
+  // MUDANÇA CRUCIAL AQUI: Usaremos um estado para o objeto token_info completo
+  const [tokenInfo, setTokenInfo] = useState(null);
+
   // Function to fetch or refresh token
   const fetchOrRefreshToken = async () => {
     console.log("Tentando recuperar ou renovar token...");
-    const localToken = localStorage.getItem("access_token");
-    // You might also want to store and check token expiration time here
-    // For simplicity, we'll always try to fetch from backend if localToken is not present,
-    // or if the player throws an auth error, indicating the localToken is stale.
+    // MUDANÇA CRUCIAL AQUI: Busca o objeto completo 'token_info'
+    const localTokenInfoString = localStorage.getItem("token_info");
+    let localTokenInfo = null;
 
-    if (localToken) {
-      // **IMPORTANT**: If you store expiration time, check it here
-      // const tokenExpiration = localStorage.getItem('token_expiration');
-      // if (tokenExpiration && Date.now() < parseInt(tokenExpiration, 10)) {
-      //   console.log("Token válido do localStorage.");
-      //   return localToken;
-      // }
-      console.log("Token encontrado no localStorage, tentando usá-lo primeiro.");
-      // For now, we assume localToken might be valid until proven otherwise by Spotify API
-      return localToken;
+    if (localTokenInfoString) {
+      try {
+        localTokenInfo = JSON.parse(localTokenInfoString);
+        // Opcional, mas recomendado: Lógica de expiração do token no frontend
+        if (
+          localTokenInfo.expires_at &&
+          Date.now() < localTokenInfo.expires_at * 1000
+        ) {
+          console.log("Token válido do localStorage (com escopos).");
+          setTokenInfo(localTokenInfo); // Atualiza o estado
+          return localTokenInfo; // Retorna o objeto completo
+        } else {
+          console.log("Token no localStorage expirado ou sem data de expiração.");
+          localStorage.removeItem("token_info"); // Remove token expirado
+        }
+      } catch (e) {
+        console.error("Erro ao parsear token_info do localStorage:", e);
+        localStorage.removeItem("token_info"); // Limpar token inválido
+      }
     }
 
     try {
@@ -45,18 +56,28 @@ function ExibirMusica() {
       const res = await fetch("https://divebackintime.onrender.com/api/token", {
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Falha ao buscar token");
+      if (!res.ok) {
+        // Se a resposta for 401 (Não Autorizado), força o logout
+        if (res.status === 401) {
+          console.error("Erro 401 ao buscar token, forçando re-autenticação.");
+          localStorage.removeItem("token_info"); // Limpar token inválido
+          navigate("/"); // Redireciona para o login
+          return null;
+        }
+        throw new Error("Falha ao buscar token");
+      }
+      // MUDANÇA CRUCIAL AQUI: 'data' agora é o objeto token_info completo
       const data = await res.json();
-      if (!data.access_token) throw new Error("Token inválido");
-      console.log("Token recebido/renovado do servidor.");
-      localStorage.setItem("access_token", data.access_token);
-      // If your backend provides expiration, store it:
-      // localStorage.setItem("token_expiration", Date.now() + data.expires_in * 1000);
-      return data.access_token;
+      if (!data.access_token) throw new Error("Token inválido recebido");
+
+      console.log("Token completo recebido/renovado do servidor:", data);
+      localStorage.setItem("token_info", JSON.stringify(data)); // Armazenar o objeto completo como string
+      setTokenInfo(data); // Atualiza o estado
+      return data; // Retorna o objeto completo
     } catch (error) {
       console.error("Erro ao buscar/renovar token:", error);
-      localStorage.removeItem("access_token"); // Clear invalid token
-      navigate("/"); // Redirect to login if token fetch fails
+      localStorage.removeItem("token_info"); // Limpar token inválido
+      navigate("/"); // Redirecionar para o login se falhar
       return null;
     }
   };
@@ -64,22 +85,26 @@ function ExibirMusica() {
   const sendDeviceIdToBackend = async (device_id) => {
     console.log("Enviando device ID para o backend:", device_id);
     try {
-      const res = await fetch("https://divebackintime.onrender.com/api/device", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ device_id }),
-      });
+      const res = await fetch(
+        "https://divebackintime.onrender.com/api/device",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ device_id }),
+        }
+      );
       if (!res.ok) throw new Error("Falha ao enviar device ID");
       console.log("Device ID enviado com sucesso.");
     } catch (error) {
       console.error("Erro ao enviar device ID:", error);
-      navigate("/");
+      // Não navegar para / aqui, pois pode estar apenas sem deviceId
+      // O erro de autenticação do player já lida com a navegação.
     }
   };
 
   useEffect(() => {
-    // This script must be loaded only once
+    // Carregar o SDK do Spotify apenas uma vez
     if (!window.Spotify) {
       const script = document.createElement("script");
       script.src = "https://sdk.scdn.co/spotify-player.js";
@@ -91,16 +116,17 @@ function ExibirMusica() {
       console.log("Spotify Web Playback SDK pronto. Criando player...");
       const spotifyPlayer = new window.Spotify.Player({
         name: "Dive Back Player",
-        // ** THIS IS THE CRUCIAL CHANGE **
-        // Call fetchOrRefreshToken() every time the SDK requests a token
+        // MUDANÇA CRUCIAL AQUI: getOAuthToken deve sempre buscar o token mais recente
         getOAuthToken: async (cb) => {
-          const token = await fetchOrRefreshToken();
-          if (token) {
-            cb(token);
+          // fetchOrRefreshToken agora retorna o objeto token_info completo
+          const currentTokenInfo = await fetchOrRefreshToken();
+          if (currentTokenInfo && currentTokenInfo.access_token) {
+            cb(currentTokenInfo.access_token); // Passa APENAS o access_token para o SDK
           } else {
-            // If token fetch failed, the callback should not be called with an invalid token
-            // The authentication_error listener will then handle redirection.
-            console.error("Não foi possível fornecer um token válido para o Spotify Player.");
+            console.error(
+              "Não foi possível fornecer um access_token válido para o Spotify Player."
+            );
+            // Não chame cb(null) ou cb("") aqui, deixe o listener de 'authentication_error' lidar com isso.
           }
         },
         volume: 0.5,
@@ -120,21 +146,23 @@ function ExibirMusica() {
 
       spotifyPlayer.addListener("authentication_error", async (error) => {
         console.error("Erro de autenticação no player:", error);
-        // If an authentication error occurs, it means the token passed to getOAuthToken was bad.
-        // Try to fetch a new token and then reconnect or navigate to login.
-        localStorage.removeItem("access_token"); // Force a fresh token fetch
-        // You might want to re-try connecting the player after a fresh token,
-        // or just navigate to login if it's a persistent issue.
+        console.error("Mensagem do erro:", error.message);
+        // MUDANÇA IMPORTANTE AQUI: Remove o token_info completo para forçar renovação
+        localStorage.removeItem("token_info");
+        // Tenta renovar o token e re-conectar. Se falhar, redireciona.
         console.log("Tentando renovar token após erro de autenticação...");
-        const newToken = await fetchOrRefreshToken();
-        if (newToken) {
+        const newTokenInfo = await fetchOrRefreshToken();
+        if (newTokenInfo) {
           console.log("Token renovado, tentando reconectar o player...");
-          // If you disconnect and reconnect, the 'ready' event might fire again.
-          // Or, more simply, navigate to '/' which should trigger a full re-initialization.
-          navigate("/"); // This will effectively re-load the component and trigger new init
+          // Você pode tentar reconectar explicitamente, ou simplesmente navegar
+          // para a página inicial que iniciará o processo novamente.
+          // player.connect(); // Isso pode não ser suficiente, dependendo do erro.
+          navigate("/selecionar", { state: { birthYear: currentYear } }); // Volta para a tela de seleção para re-iniciar tudo
         } else {
-          console.error("Falha ao renovar token após erro de autenticação. Redirecionando.");
-          navigate("/");
+          console.error(
+            "Falha ao renovar token após erro de autenticação. Redirecionando para login."
+          );
+          navigate("/"); // Redireciona para o login se a renovação falhar
         }
       });
 
@@ -153,8 +181,8 @@ function ExibirMusica() {
           console.log("Conectado ao player Spotify com sucesso.");
         } else {
           console.error("Falha ao conectar ao player Spotify.");
-          // If initial connection fails, clear token and navigate
-          localStorage.removeItem("access_token");
+          // Se a conexão inicial falhar, limpe o token e navegue
+          localStorage.removeItem("token_info");
           navigate("/");
         }
       });
@@ -165,31 +193,36 @@ function ExibirMusica() {
         console.log("Desconectando player Spotify...");
         player.disconnect();
       }
-      // Clean up the window.onSpotifyWebPlaybackSDKReady to prevent multiple bindings
+      // Limpar o window.onSpotifyWebPlaybackSDKReady para evitar múltiplas vinculações
       window.onSpotifyWebPlaybackSDKReady = null;
     };
-  }, [navigate, player]); // Added 'player' to dependencies to ensure disconnect works if player state changes
+    // Adicione 'tokenInfo' às dependências para que o useEffect reaja a mudanças no token
+  }, [navigate, player, tokenInfo]); 
 
   // ... rest of your component (useEffect for fetchSong, formatTime, handlers) remains the same
 
   useEffect(() => {
-    if (!deviceId) return;
+    // Garante que só busca música se o deviceId estiver disponível e o tokenInfo existir
+    if (!deviceId || !tokenInfo) return;
 
     const fetchSong = async () => {
       try {
+        console.log("Buscando música para o ano:", currentYear);
         const res = await fetch(
           `https://divebackintime.onrender.com/api/year?year=${currentYear}`,
           { method: "GET", credentials: "include" }
         );
         if (!res.ok) {
-            // If fetching a song also returns 401, it means the token is bad
-            if (res.status === 401) {
-                console.error("Erro 401 ao buscar música, token provavelmente expirado. Forçando re-autenticação.");
-                localStorage.removeItem("access_token"); // Clear old token
-                navigate("/"); // Trigger full re-auth flow
-                return;
-            }
-            throw new Error("Erro ao buscar música");
+          // Se buscar uma música também retornar 401, o token está ruim.
+          if (res.status === 401) {
+            console.error(
+              "Erro 401 ao buscar música, token provavelmente expirado. Forçando re-autenticação."
+            );
+            localStorage.removeItem("token_info"); // Limpa o token antigo
+            navigate("/"); // Aciona o fluxo de re-autenticação completo
+            return;
+          }
+          throw new Error("Erro ao buscar música");
         }
         const data = await res.json();
         setSongData(data);
@@ -205,7 +238,7 @@ function ExibirMusica() {
     };
 
     fetchSong();
-  }, [currentYear, deviceId, navigate]); // Added navigate to dependency array
+  }, [currentYear, deviceId, navigate, tokenInfo]); // Adicionado tokenInfo à dependência
 
   useEffect(() => {
     if (isPlaying && songData) {
@@ -223,7 +256,7 @@ function ExibirMusica() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-  }, [isPlaying, duration, songData, currentYear]); // Added currentYear to dependency array
+  }, [isPlaying, duration, songData, currentYear]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -234,20 +267,29 @@ function ExibirMusica() {
   const IrParaCriar = () => navigate("/criar");
 
   const postToBackend = async (endpoint) => {
-    if (!deviceId) return false;
+    // MUDANÇA IMPORTANTE AQUI: Verifica se deviceId e tokenInfo existem antes de prosseguir
+    if (!deviceId || !tokenInfo) {
+        console.warn("Player ou token não estão prontos para enviar requisição ao backend.");
+        return false;
+    }
     try {
       console.log(`Enviando requisição para /api/${endpoint}`);
-      const res = await fetch(`https://divebackintime.onrender.com/api/${endpoint}`, {
-        method: "GET",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `https://divebackintime.onrender.com/api/${endpoint}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
       if (!res.ok) {
-        // If playback control also returns 401, force re-auth
+        // Se o controle de reprodução também retornar 401, força a re-autenticação
         if (res.status === 401) {
-            console.error(`Erro 401 na requisição /api/${endpoint}, token provavelmente expirado. Forçando re-autenticação.`);
-            localStorage.removeItem("access_token");
-            navigate("/");
-            return false;
+          console.error(
+            `Erro 401 na requisição /api/${endpoint}, token provavelmente expirado. Forçando re-autenticação.`
+          );
+          localStorage.removeItem("token_info");
+          navigate("/");
+          return false;
         }
         console.error(`Falha na requisição /api/${endpoint}`);
         return false;

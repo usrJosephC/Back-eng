@@ -78,7 +78,7 @@ def send_token():
             print("DEBUG BACKEND: A chave 'scope' NÃO FOI ENCONTRADA no token_info da sessão (para o frontend).")
         # --- FIM DOS PRINTS DE DEPURACÃO AQUI ---
 
-        return jsonify({'access_token': token_info['access_token']}), 200
+        return jsonify(token_info), 200
     else:
         return jsonify({'error': 'No valid token found.'}), 401
 
