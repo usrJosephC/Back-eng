@@ -49,14 +49,14 @@ def callback():
         sp_oauth = auth_manager()
         token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
-        return redirect('/success')
+        return redirect('divebackintime.onrender.com')  # redirect to the frontend after successful authentication
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
     
-@app.route('/success', methods=['GET'])
-def success():
-    '''returns a success message after successful authentication'''
-    return jsonify({'message': 'Authentication successful! You can now close this tab.'}), 200
+# @app.route('/success', methods=['GET'])
+# def success():
+#     '''returns a success message after successful authentication'''
+#     return jsonify({'message': 'Authentication successful! You can now close this tab.'}), 200
     
 @app.route('/token', methods=['GET'])
 def send_token():
@@ -202,7 +202,7 @@ def play_next():
 def make_playlist():
     '''receives the years of songs from the frontend and creates a playlist with those songs'''
     data = request.get_json()
-    years_of_songs = data.get('chosen_years')
+    years_of_songs = data.get('years')
     if not years_of_songs:
         return jsonify({'error': 'No songs provided'}), 400
 
