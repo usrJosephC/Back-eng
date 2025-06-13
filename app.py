@@ -14,8 +14,8 @@ from spotify_requests.next_track import next_track
 from spotify_requests.create_playlist import create_playlist
 
 app = Flask(__name__, static_folder='frontend/build', static_url_path='')
-# os.getenv('FLASK_SECRET_KEY')
-app.secret_key = 1234
+
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
     SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
