@@ -26,12 +26,21 @@ app.config.update(
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
+    '''serves the frontend files, redirecting to index.html if the requested file is not found'''
+    print(f"Serving path: {path}")
     if path.startswith('api/'):
         return jsonify({'error': 'API endpoint not found'}), 404
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+
+    file_path = os.path.join(app.static_folder, path)
+    print(f"Looking for file: {file_path}")
+
+    if path != "" and os.path.exists(file_path):
+        print("Serving static file")
         return send_from_directory(app.static_folder, path)
     else:
+        print("Serving index.html")
         return send_from_directory(app.static_folder, 'index.html')
+
 
 @app.route('/api/login', methods=['GET'])
 def login():
