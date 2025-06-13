@@ -23,29 +23,16 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax'  # prevents CSRF attacks
 )
 
-# @app.route('/')
-# def index():
-#     '''serves the index.html file from the static folder'''
-#     return send_from_directory(app.static_folder, "index.html")
-
-# @app.route('/<path:path>')
-# def serve(path):
-#     '''serves static files from the static folder, or index.html if the file does not exist'''
-#     file_path = os.path.join(app.static_folder, path)
-#     if os.path.exists(file_path):
-#         return send_from_directory(app.static_folder, path)
-#     else:
-#         return send_from_directory(app.static_folder, 'index.html')
-
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react_app(path):
+    '''serves the React app for any route that is not an API endpoint or a static file'''
     full_path = os.path.join(app.static_folder, path)
 
     if path != "" and os.path.exists(full_path):
         return send_from_directory(app.static_folder, path)
     else:
-        # Para qualquer rota que não seja um arquivo estático, entrega o index.html
+        # para qualquer rota que não seja um arquivo estático, entrega o index.html
         return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/api/login', methods=['GET'])
@@ -66,7 +53,7 @@ def callback():
         sp_oauth = auth_manager()
         token_info = sp_oauth.get_access_token(code)
         session['token_info'] = token_info
-        return redirect('https://divebackintime.onrender.com/selecionar')  # redirect to the frontend after successful authentication
+        return redirect('https://divebackintime.onrender.com/#/selecionar')  # redirect to the frontend after successful authentication
     except Exception as e:
         return jsonify({'error': f'An error occurred during authentication: {e}'}), 500
     
