@@ -16,8 +16,8 @@ from spotify_requests.next_track import next_track
 from spotify_requests.create_playlist import create_playlist
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', 'https://divebackintime.onrender.com'], 
-                    supports_credentials=True)
+CORS(app, origins='https://divebackintime.onrender.com', supports_credentials=True)
+
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
