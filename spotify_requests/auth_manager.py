@@ -11,17 +11,20 @@ def auth_manager():
     client_id = os.getenv('CLIENT_ID')
     client_secret = os.getenv('CLIENT_SECRET')
     redirect_uri = os.getenv('REDIRECT_URI')
-    scope = (
-        "playlist-modify-public "
-        "user-read-playback-state "
-        "user-modify-playback-state "
-        "user-library-read "
-        "user-library-modify "
-        "user-read-currently-playing "
-        "user-read-playback-position "
-        "user-read-recently-played "
+
+    scope_list = [
+        "playlist-modify-public",
+        "user-read-playback-state",
+        "user-modify-playback-state",
+        "user-library-read",
+        "user-library-modify",
+        "user-read-currently-playing",
+        "user-read-playback-position",
+        "user-read-recently-played",
         "streaming"
-    )
+    ]
+
+    scope = " ".join(scope_list)
 
     return SpotifyOAuth(client_id=client_id,
                         client_secret=client_secret,
