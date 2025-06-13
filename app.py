@@ -52,6 +52,15 @@ def callback():
     try:
         sp_oauth = auth_manager()
         token_info = sp_oauth.get_access_token(code)
+
+        # --- INÍCIO DOS PRINTS DE DEPURACÃO AQUI ---
+        print(f"DEBUG BACKEND: token_info completo recebido do Spotify no callback: {token_info}")
+        if 'scope' in token_info:
+            print(f"DEBUG BACKEND: Scopes explicitamente concedidos pelo Spotify no token_info: {token_info['scope']}")
+        else:
+            print("DEBUG BACKEND: A chave 'scope' NÃO FOI ENCONTRADA no token_info inicial (pós-callback).")
+        # --- FIM DOS PRINTS DE DEPURACÃO AQUI ---
+
         session['token_info'] = token_info
         return redirect('https://divebackintime.onrender.com/#/selecionar')  # redirect to the frontend after successful authentication
     except Exception as e:
@@ -62,6 +71,13 @@ def send_token():
     '''returns the access token to the frontend if it exists in the session'''
     token_info = session.get('token_info', None)
     if token_info and 'access_token' in token_info:
+        # --- INÍCIO DOS PRINTS DE DEPURACÃO AQUI ---
+        if 'scope' in token_info:
+            print(f"DEBUG BACKEND: Scopes do token_info na sessão antes de enviar para o frontend: {token_info['scope']}")
+        else:
+            print("DEBUG BACKEND: A chave 'scope' NÃO FOI ENCONTRADA no token_info da sessão (para o frontend).")
+        # --- FIM DOS PRINTS DE DEPURACÃO AQUI ---
+
         return jsonify({'access_token': token_info['access_token']}), 200
     else:
         return jsonify({'error': 'No valid token found.'}), 401
