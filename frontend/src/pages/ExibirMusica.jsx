@@ -20,114 +20,157 @@ function ExibirMusica() {
   const [songData, setSongData] = useState(null);
   const intervalRef = useRef(null);
 
+  // Function to fetch or refresh token
+  const fetchOrRefreshToken = async () => {
+    console.log("Tentando recuperar ou renovar token...");
+    const localToken = localStorage.getItem("access_token");
+    // You might also want to store and check token expiration time here
+    // For simplicity, we'll always try to fetch from backend if localToken is not present,
+    // or if the player throws an auth error, indicating the localToken is stale.
+
+    if (localToken) {
+      // **IMPORTANT**: If you store expiration time, check it here
+      // const tokenExpiration = localStorage.getItem('token_expiration');
+      // if (tokenExpiration && Date.now() < parseInt(tokenExpiration, 10)) {
+      //   console.log("Token válido do localStorage.");
+      //   return localToken;
+      // }
+      console.log("Token encontrado no localStorage, tentando usá-lo primeiro.");
+      // For now, we assume localToken might be valid until proven otherwise by Spotify API
+      return localToken;
+    }
+
+    try {
+      console.log("Buscando token do servidor (ou renovando)...");
+      const res = await fetch("https://divebackintime.onrender.com/api/token", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Falha ao buscar token");
+      const data = await res.json();
+      if (!data.access_token) throw new Error("Token inválido");
+      console.log("Token recebido/renovado do servidor.");
+      localStorage.setItem("access_token", data.access_token);
+      // If your backend provides expiration, store it:
+      // localStorage.setItem("token_expiration", Date.now() + data.expires_in * 1000);
+      return data.access_token;
+    } catch (error) {
+      console.error("Erro ao buscar/renovar token:", error);
+      localStorage.removeItem("access_token"); // Clear invalid token
+      navigate("/"); // Redirect to login if token fetch fails
+      return null;
+    }
+  };
+
+  const sendDeviceIdToBackend = async (device_id) => {
+    console.log("Enviando device ID para o backend:", device_id);
+    try {
+      const res = await fetch("https://divebackintime.onrender.com/api/device", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ device_id }),
+      });
+      if (!res.ok) throw new Error("Falha ao enviar device ID");
+      console.log("Device ID enviado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao enviar device ID:", error);
+      navigate("/");
+    }
+  };
+
   useEffect(() => {
-    const fetchToken = async () => {
-      console.log("Tentando recuperar token...");
-      const localToken = localStorage.getItem("access_token");
-      if (localToken) {
-        console.log("Token recuperado do localStorage.");
-        return localToken;
-      }
-      try {
-        console.log("Buscando token do servidor...");
-        const res = await fetch("https://divebackintime.onrender.com/api/token", {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Falha ao buscar token");
-        const data = await res.json();
-        if (!data.access_token) throw new Error("Token inválido");
-        console.log("Token recebido do servidor:", data.access_token);
-        localStorage.setItem("access_token", data.access_token);
-        return data.access_token;
-      } catch (error) {
-        console.error("Erro ao buscar token:", error);
-        navigate("/");
-        return null;
-      }
-    };
-
-    const sendDeviceIdToBackend = async (device_id) => {
-      console.log("Enviando device ID para o backend:", device_id);
-      try {
-        const res = await fetch("https://divebackintime.onrender.com/api/device", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ device_id }),
-        });
-        if (!res.ok) throw new Error("Falha ao enviar device ID");
-        console.log("Device ID enviado com sucesso.");
-      } catch (error) {
-        console.error("Erro ao enviar device ID:", error);
-        navigate("/");
-      }
-    };
-
-    const loadSpotifyPlayer = async () => {
-      console.log("Carregando Spotify Web Playback SDK...");
-      const token = await fetchToken();
-      if (!token) {
-        console.log("Token inválido, abortando criação do player.");
-        return;
-      }
-
+    // This script must be loaded only once
+    if (!window.Spotify) {
       const script = document.createElement("script");
       script.src = "https://sdk.scdn.co/spotify-player.js";
       script.async = true;
       document.body.appendChild(script);
+    }
 
-      window.onSpotifyWebPlaybackSDKReady = () => {
-        console.log("Spotify Web Playback SDK pronto. Criando player...");
-        const spotifyPlayer = new window.Spotify.Player({
-          name: "Dive Back Player",
-          getOAuthToken: (cb) => cb(token),
-          volume: 0.5,
-        });
-
-        setPlayer(spotifyPlayer);
-
-        spotifyPlayer.addListener("ready", async ({ device_id }) => {
-          console.log("Player pronto! Device ID:", device_id);
-          setDeviceId(device_id);
-          await sendDeviceIdToBackend(device_id);
-        });
-
-        spotifyPlayer.addListener("not_ready", ({ device_id }) => {
-          console.log("Player ficou offline. Device ID:", device_id);
-        });
-
-        spotifyPlayer.addListener("authentication_error", (error) => {
-          console.error("Erro de autenticação no player:", error);
-          navigate("/");
-        });
-
-        spotifyPlayer.addListener("account_error", (error) => {
-          console.error("Erro na conta Spotify:", error);
-        });
-
-        spotifyPlayer.addListener("playback_error", (error) => {
-          console.error("Erro na reprodução:", error);
-        });
-
-        spotifyPlayer.connect().then((success) => {
-          if (success) {
-            console.log("Conectado ao player Spotify com sucesso.");
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      console.log("Spotify Web Playback SDK pronto. Criando player...");
+      const spotifyPlayer = new window.Spotify.Player({
+        name: "Dive Back Player",
+        // ** THIS IS THE CRUCIAL CHANGE **
+        // Call fetchOrRefreshToken() every time the SDK requests a token
+        getOAuthToken: async (cb) => {
+          const token = await fetchOrRefreshToken();
+          if (token) {
+            cb(token);
           } else {
-            console.error("Falha ao conectar ao player Spotify.");
+            // If token fetch failed, the callback should not be called with an invalid token
+            // The authentication_error listener will then handle redirection.
+            console.error("Não foi possível fornecer um token válido para o Spotify Player.");
           }
-        });
-      };
-    };
+        },
+        volume: 0.5,
+      });
 
-    loadSpotifyPlayer();
+      setPlayer(spotifyPlayer);
+
+      spotifyPlayer.addListener("ready", async ({ device_id }) => {
+        console.log("Player pronto! Device ID:", device_id);
+        setDeviceId(device_id);
+        await sendDeviceIdToBackend(device_id);
+      });
+
+      spotifyPlayer.addListener("not_ready", ({ device_id }) => {
+        console.log("Player ficou offline. Device ID:", device_id);
+      });
+
+      spotifyPlayer.addListener("authentication_error", async (error) => {
+        console.error("Erro de autenticação no player:", error);
+        // If an authentication error occurs, it means the token passed to getOAuthToken was bad.
+        // Try to fetch a new token and then reconnect or navigate to login.
+        localStorage.removeItem("access_token"); // Force a fresh token fetch
+        // You might want to re-try connecting the player after a fresh token,
+        // or just navigate to login if it's a persistent issue.
+        console.log("Tentando renovar token após erro de autenticação...");
+        const newToken = await fetchOrRefreshToken();
+        if (newToken) {
+          console.log("Token renovado, tentando reconectar o player...");
+          // If you disconnect and reconnect, the 'ready' event might fire again.
+          // Or, more simply, navigate to '/' which should trigger a full re-initialization.
+          navigate("/"); // This will effectively re-load the component and trigger new init
+        } else {
+          console.error("Falha ao renovar token após erro de autenticação. Redirecionando.");
+          navigate("/");
+        }
+      });
+
+      spotifyPlayer.addListener("account_error", (error) => {
+        console.error("Erro na conta Spotify:", error);
+        navigate("/"); // Redirect on account error
+      });
+
+      spotifyPlayer.addListener("playback_error", (error) => {
+        console.error("Erro na reprodução:", error);
+        // Consider handling this gracefully, maybe pausing or skipping
+      });
+
+      spotifyPlayer.connect().then((success) => {
+        if (success) {
+          console.log("Conectado ao player Spotify com sucesso.");
+        } else {
+          console.error("Falha ao conectar ao player Spotify.");
+          // If initial connection fails, clear token and navigate
+          localStorage.removeItem("access_token");
+          navigate("/");
+        }
+      });
+    };
 
     return () => {
       if (player) {
         console.log("Desconectando player Spotify...");
         player.disconnect();
       }
+      // Clean up the window.onSpotifyWebPlaybackSDKReady to prevent multiple bindings
+      window.onSpotifyWebPlaybackSDKReady = null;
     };
-  }, [navigate]);
+  }, [navigate, player]); // Added 'player' to dependencies to ensure disconnect works if player state changes
+
+  // ... rest of your component (useEffect for fetchSong, formatTime, handlers) remains the same
 
   useEffect(() => {
     if (!deviceId) return;
@@ -138,12 +181,22 @@ function ExibirMusica() {
           `https://divebackintime.onrender.com/api/year?year=${currentYear}`,
           { method: "GET", credentials: "include" }
         );
-        if (!res.ok) throw new Error("Erro ao buscar música");
+        if (!res.ok) {
+            // If fetching a song also returns 401, it means the token is bad
+            if (res.status === 401) {
+                console.error("Erro 401 ao buscar música, token provavelmente expirado. Forçando re-autenticação.");
+                localStorage.removeItem("access_token"); // Clear old token
+                navigate("/"); // Trigger full re-auth flow
+                return;
+            }
+            throw new Error("Erro ao buscar música");
+        }
         const data = await res.json();
         setSongData(data);
         setDuration(Math.floor(data.track_duration / 1000));
         setProgress(0);
-      } catch {
+      } catch (error) {
+        console.error("Erro ao buscar música:", error);
         setSongData(null);
         setDuration(180);
         setProgress(0);
@@ -152,7 +205,7 @@ function ExibirMusica() {
     };
 
     fetchSong();
-  }, [currentYear, deviceId]);
+  }, [currentYear, deviceId, navigate]); // Added navigate to dependency array
 
   useEffect(() => {
     if (isPlaying && songData) {
@@ -170,7 +223,7 @@ function ExibirMusica() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
-  }, [isPlaying, duration, songData]);
+  }, [isPlaying, duration, songData, currentYear]); // Added currentYear to dependency array
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -189,6 +242,13 @@ function ExibirMusica() {
         credentials: "include",
       });
       if (!res.ok) {
+        // If playback control also returns 401, force re-auth
+        if (res.status === 401) {
+            console.error(`Erro 401 na requisição /api/${endpoint}, token provavelmente expirado. Forçando re-autenticação.`);
+            localStorage.removeItem("access_token");
+            navigate("/");
+            return false;
+        }
         console.error(`Falha na requisição /api/${endpoint}`);
         return false;
       }
