@@ -14,8 +14,8 @@ from spotify_requests.next_track import next_track
 from spotify_requests.create_playlist import create_playlist
 
 app = Flask(__name__, static_folder='frontend/build', static_url_path='')
-
-app.secret_key = os.getenv('FLASK_SECRET_KEY')
+# os.getenv('FLASK_SECRET_KEY')
+app.secret_key = 1234
 app.config.update(
     SESSION_COOKIE_NAME='spotify_session', # name of the session cookie
     SESSION_COOKIE_HTTPONLY=True, # prevents JavaScript access to the cookie
@@ -23,24 +23,18 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax'  # prevents CSRF attacks
 )
 
-@app.route('/', defaults={'path': ''})
+@app.route('/')
+def index():
+    '''serves the index.html file from the static folder'''
+    return send_from_directory(app.static_folder, "index.html")
+
 @app.route('/<path:path>')
-def serve_frontend(path):
-    '''serves the frontend files, redirecting to index.html if the requested file is not found'''
-    print(f"Serving path: {path}")
-    if path.startswith('api/'):
-        return jsonify({'error': 'API endpoint not found'}), 404
-
-    file_path = os.path.join(app.static_folder, path)
-    print(f"Looking for file: {file_path}")
-
-    if path != "" and os.path.exists(file_path):
-        print("Serving static file")
+def serve(path):
+    '''serves static files from the static folder, or index.html if the file does not exist'''
+    if (app.static_folder / path).exists():
         return send_from_directory(app.static_folder, path)
     else:
-        print("Serving index.html")
-        return send_from_directory(app.static_folder, 'index.html')
-
+        return send_from_directory(app.static_folder, "index.html")
 
 @app.route('/api/login', methods=['GET'])
 def login():
