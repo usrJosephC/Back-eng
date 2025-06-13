@@ -7,38 +7,47 @@ import sendIcon from '../assets/send.svg';
 const CriarPlaylist = () => {
   const navigate = useNavigate();
 
-  const anoParaBuscar = localStorage.getItem('anoEscolhido'); // <-- pegando do localStorage
+  // Pega todos os anos da viagem (array) do localStorage
+  const anosParaBuscar = JSON.parse(localStorage.getItem('anosSelecionados') || '[]');
 
-  const [musicas, setMusicas] = useState([]);
-  const [anosSelecionados, setAnosSelecionados] = useState([]);
+  const [musicas, setMusicas] = useState([]); // lista completa de músicas de todos os anos
+  const [anosSelecionados, setAnosSelecionados] = useState([]); // quais anos o usuário quer incluir
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    if (!anoParaBuscar) {
-      setErro('Ano não informado. Volte e escolha um ano.');
+    if (anosParaBuscar.length === 0) {
+      setErro('Nenhum ano selecionado. Volte e escolha sua viagem musical.');
       setLoading(false);
       return;
     }
 
     const fetchMusicas = async () => {
       try {
-        const res = await fetch(`https://divebackintime.onrender.com/api/year?year=${anoParaBuscar}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+        // Faz requisições para todos os anos e espera todas concluírem
+        const respostas = await Promise.all(
+          anosParaBuscar.map(async (ano) => {
+            const res = await fetch(`https://divebackintime.onrender.com/api/year?year=${ano}`, {
+              method: 'GET',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+            });
 
-        if (!res.ok) throw new Error('Erro ao buscar músicas');
-        const dados = await res.json();
+            if (!res.ok) throw new Error(`Erro ao buscar músicas do ano ${ano}`);
 
-        const listaMusicas = Object.entries(dados).map(([ano, info]) => ({
-          ano: parseInt(ano),
-          ...info
-        }));
+            const dados = await res.json();
 
-        setMusicas(listaMusicas);
-        setAnosSelecionados(listaMusicas.map(m => m.ano)); // tudo selecionado por padrão
+            // Converte a resposta para formato uniforme
+            // dados é um objeto { "ano": { song_img, song_name, artist_name, ... } }
+            return {
+              ano: parseInt(ano),
+              ...dados[ano],
+            };
+          })
+        );
+
+        setMusicas(respostas);
+        setAnosSelecionados(respostas.map(m => m.ano)); // seleciona todos por padrão
       } catch (err) {
         console.error(err);
         setErro('Erro ao carregar músicas.');
@@ -48,7 +57,7 @@ const CriarPlaylist = () => {
     };
 
     fetchMusicas();
-  }, [anoParaBuscar]);
+  }, [anosParaBuscar]);
 
   const toggleAno = (ano) => {
     setAnosSelecionados(prev =>
@@ -105,7 +114,7 @@ const CriarPlaylist = () => {
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               {musicas.map((m) => (
                 <div
                   key={m.ano}
