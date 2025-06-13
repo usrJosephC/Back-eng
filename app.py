@@ -13,7 +13,7 @@ from spotify_requests.pause_music import pause_music
 from spotify_requests.next_track import next_track
 from spotify_requests.create_playlist import create_playlist
 
-app = Flask(__name__, static_folder='frontend_build', static_url_path='')
+app = Flask(__name__, static_folder='frontend/build', static_url_path='')
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 app.config.update(
