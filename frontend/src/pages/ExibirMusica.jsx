@@ -1,144 +1,132 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom"; // Import useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import homeIcon from "../assets/home.svg";
 import playIcon from "../assets/play.svg";
 import pauseIcon from "../assets/pause.svg";
 import backward from "../assets/backward.svg";
 import forward from "../assets/forward.svg";
 
-function ExibirMusica() { // birthYear will come from location state
+function ExibirMusica() {
   const navigate = useNavigate();
-  const location = useLocation(); // Hook to access location state
-  const initialBirthYear = location.state?.birthYear || 1990; // Get birthYear from state, default if not found
+  const location = useLocation();
+  const initialBirthYear = location.state?.birthYear || 1990;
 
   const [player, setPlayer] = useState(null);
-  const [deviceId, setDeviceId] = useState('');
-  const accessToken = localStorage.getItem('access_token'); // Get token from localStorage
-
-  const [currentYear, setCurrentYear] = useState(initialBirthYear); // Initialize with passed birthYear
+  const [deviceId, setDeviceId] = useState("");
+  const [currentYear, setCurrentYear] = useState(initialBirthYear);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(180);
   const [songData, setSongData] = useState(null);
-  const [token, setToken] = useState(null); // Now using accessToken from localStorage
   const intervalRef = useRef(null);
 
-  // --- Spotify SDK Initialization ---
   useEffect(() => {
-    if (!accessToken) {
-      console.error("Access Token not found. Redirecting to home.");
-      navigate('/'); // Redirect if no access token
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://sdk.scdn.co/spotify-player.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      const spotifyPlayer = new window.Spotify.Player({
-        name: 'Dive Back Player',
-        getOAuthToken: cb => { cb(accessToken); },
-        volume: 0.5,
-      });
-
-      setPlayer(spotifyPlayer); // Set the Spotify player instance
-
-      spotifyPlayer.addListener('ready', async ({ device_id }) => {
-        console.log('Device is ready with ID', device_id);
-        setDeviceId(device_id);
-
-        // Send the device_id to the backend
-        try {
-          const res = await fetch('https://divebackintime.onrender.com/api/device', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', 
-            body: JSON.stringify({ device_id }),
-          });
-          if (!res.ok) throw new Error('Failed to send device ID to backend');
-          console.log('Device ID enviado com sucesso!');
-        } catch (error) {
-          console.error('Erro ao enviar device_id:', error);
-          // Handle error, e.g., display a message to the user
-        }
-      });
-
-      spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-        console.log('Device ID has gone offline', device_id);
-      });
-
-      spotifyPlayer.addListener('authentication_error', ({ message }) => {
-        console.error('Authentication error:', message);
-        // Redirect to login or show an error
-        navigate('/'); 
-      });
-
-      spotifyPlayer.addListener('account_error', ({ message }) => {
-        console.error('Account error:', message);
-        // Inform user about premium account requirement
-      });
-
-      spotifyPlayer.connect();
-    };
-
-    return () => {
-      if (player) {
-        player.disconnect();
+    const fetchToken = async () => {
+      try {
+        const res = await fetch("https://divebackintime.onrender.com/api/token", {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Falha ao buscar token");
+        const data = await res.json();
+        return data.access_token;
+      } catch (error) {
+        navigate("/");
+        return null;
       }
     };
-  }, [accessToken, navigate, player]); // Added player to dependencies for cleanup
 
-  // Set the token from localStorage once available
+    const sendDeviceIdToBackend = async (device_id) => {
+      try {
+        const res = await fetch("https://divebackintime.onrender.com/api/device", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ device_id }),
+        });
+        if (!res.ok) throw new Error("Falha ao enviar device ID");
+      } catch {
+        navigate("/");
+      }
+    };
+
+    const loadSpotifyPlayer = async () => {
+      const token = await fetchToken();
+      if (!token) return;
+
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const spotifyPlayer = new window.Spotify.Player({
+          name: "Dive Back Player",
+          getOAuthToken: (cb) => cb(token),
+          volume: 0.5,
+        });
+
+        setPlayer(spotifyPlayer);
+
+        spotifyPlayer.addListener("ready", async ({ device_id }) => {
+          setDeviceId(device_id);
+          await sendDeviceIdToBackend(device_id);
+        });
+
+        spotifyPlayer.addListener("not_ready", ({ device_id }) => {
+          // Pode logar ou tratar se necessário
+        });
+
+        spotifyPlayer.addListener("authentication_error", () => {
+          navigate("/");
+        });
+
+        spotifyPlayer.addListener("account_error", () => {
+          // Pode tratar se quiser
+        });
+
+        spotifyPlayer.connect();
+      };
+    };
+
+    loadSpotifyPlayer();
+
+    return () => {
+      if (player) player.disconnect();
+    };
+  }, [navigate]);
+
   useEffect(() => {
-    if (accessToken) {
-      setToken(accessToken);
-    }
-  }, [accessToken]);
+    if (!deviceId) return;
 
-
-  // --- MusicPlayer Logic ---
-  useEffect(() => {
-    if (!token || !deviceId) return; // Wait for token and deviceId
     const fetchSong = async () => {
       try {
         const res = await fetch(
           `https://divebackintime.onrender.com/api/year?year=${currentYear}`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
+          { method: "GET", credentials: "include" }
         );
         if (!res.ok) throw new Error("Erro ao buscar música");
         const data = await res.json();
         setSongData(data);
         setDuration(Math.floor(data.track_duration / 1000));
         setProgress(0);
-        // Optionally auto-play new song if it was playing before
-        // if (isPlaying) {
-        //   player.play(); // Or trigger backend play route
-        // }
-      } catch (error) {
-        console.error("Erro ao buscar música:", error);
+      } catch {
         setSongData(null);
-        setDuration(180); // Default duration
+        setDuration(180);
         setProgress(0);
         setIsPlaying(false);
       }
     };
+
     fetchSong();
-  }, [currentYear, token, deviceId]); 
+  }, [currentYear, deviceId]);
 
   useEffect(() => {
     if (isPlaying && songData) {
       intervalRef.current = setInterval(() => {
-        setProgress(prev => {
+        setProgress((prev) => {
           if (prev >= duration) {
             clearInterval(intervalRef.current);
-            setCurrentYear(y => y + 1); // Go to next year automatically
+            setCurrentYear((y) => y + 1);
             return 0;
           }
           return prev + 1;
@@ -150,7 +138,7 @@ function ExibirMusica() { // birthYear will come from location state
     return () => clearInterval(intervalRef.current);
   }, [isPlaying, duration, songData]);
 
-  const formatTime = seconds => {
+  const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
@@ -158,62 +146,42 @@ function ExibirMusica() { // birthYear will come from location state
 
   const IrParaCriar = () => navigate("/criar");
 
-  const postToBackend = async endpoint => {
-    if (!token || !deviceId) {
-      console.warn("Token or Device ID not available. Cannot perform action.");
-      return false; 
-    }
+  const postToBackend = async (endpoint) => {
+    if (!deviceId) return false;
     try {
-      const res = await fetch(
-        `https://divebackintime.onrender.com/api/${endpoint}`,
-        {
-          method: "GET", // These endpoints are GET as per your spec
-          credentials: "include", 
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Erro na rota ${endpoint}: ${res.status} ${errorText}`);
-      }
+      const res = await fetch(`https://divebackintime.onrender.com/api/${endpoint}`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!res.ok) return false;
       return true;
-    } catch (error) {
-      console.error(`Erro ao chamar ${endpoint}:`, error);
-      // Potentially show a user-friendly error message
+    } catch {
       return false;
     }
   };
 
   const handlePlayPause = async () => {
-    if (!songData) {
-      console.warn("No song data to play/pause.");
-      return;
-    }
+    if (!songData) return;
     const success = await postToBackend(isPlaying ? "pause" : "play");
-    if (success) {
-      setIsPlaying(v => !v);
-    }
+    if (success) setIsPlaying((v) => !v);
   };
 
   const goToPreviousYear = async () => {
-    if (currentYear <= 1946) { // Adjusted min year to 1946 based on SelecionarAno
-      console.warn("Cannot go to previous year, already at the minimum.");
-      return;
-    }
+    if (currentYear <= 1946) return;
     const success = await postToBackend("previous");
     if (success) {
-      setCurrentYear(y => y - 1);
+      setCurrentYear((y) => y - 1);
       setProgress(0);
-      setIsPlaying(false); // Pause when changing song
+      setIsPlaying(false);
     }
   };
 
   const goToNextYear = async () => {
     const success = await postToBackend("next");
     if (success) {
-      setCurrentYear(y => y + 1);
+      setCurrentYear((y) => y + 1);
       setProgress(0);
-      setIsPlaying(false); // Pause when changing song
+      setIsPlaying(false);
     }
   };
 
@@ -232,7 +200,11 @@ function ExibirMusica() { // birthYear will come from location state
 
       <div className="w-48 h-48 mb-6">
         {songData ? (
-          <img src={songData.song_img} alt="Capa da música" className="w-full h-full object-cover rounded" />
+          <img
+            src={songData.song_img}
+            alt="Capa da música"
+            className="w-full h-full object-cover rounded"
+          />
         ) : (
           <div className="w-full h-full bg-gray-700 rounded flex items-center justify-center">
             <p className="text-sm text-gray-400">Carregando música...</p>
@@ -261,7 +233,11 @@ function ExibirMusica() { // birthYear will come from location state
           <img src={backward} alt="Voltar" className="h-6 w-6 fill-white" />
         </button>
         <button onClick={handlePlayPause} disabled={!songData}>
-          <img src={isPlaying ? pauseIcon : playIcon} alt="Play/Pause" className="h-10 w-10 fill-white" />
+          <img
+            src={isPlaying ? pauseIcon : playIcon}
+            alt="Play/Pause"
+            className="h-10 w-10 fill-white"
+          />
         </button>
         <button onClick={goToNextYear}>
           <img src={forward} alt="Avançar" className="h-6 w-6 fill-white" />
@@ -275,15 +251,11 @@ function ExibirMusica() { // birthYear will come from location state
         Ir para sua viagem no tempo
       </button>
 
-      {/* Displaying device ID status for debugging, can be removed in production */}
       {!deviceId && (
         <p className="text-yellow-300 mt-4">Carregando player do Spotify...</p>
       )}
       {deviceId && (
         <p className="text-green-400 mt-4">Player carregado e conectado!</p>
-      )}
-      {!accessToken && (
-        <p className="text-red-400 mt-4">Erro: Token de acesso não encontrado. Faça login novamente.</p>
       )}
     </div>
   );

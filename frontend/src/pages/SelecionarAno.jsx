@@ -40,6 +40,7 @@ const SelecionarAno = () => {
 
       if (response.ok) {
         console.log('Ano enviado com sucesso!')
+        localStorage.setItem('anoEscolhido', ano);
         navigate('/exibir', {state: {birthYear: parseInt(selectedYear)}});
       } else {
         const errorData = await response.json();

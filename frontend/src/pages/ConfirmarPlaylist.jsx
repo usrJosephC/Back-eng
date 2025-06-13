@@ -7,86 +7,67 @@ import restartIcon from '../assets/restart.svg';
 
 function ConfirmarPlaylist() {
   const navigate = useNavigate();
-  const [selectedSongsDetails, setSelectedSongsDetails] = useState([]);
+  const [musicasSelecionadas, setMusicasSelecionadas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [playlistCreated, setPlaylistCreated] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [playlistCriada, setPlaylistCriada] = useState(false);
 
   useEffect(() => {
-    const fetchSelectedSongs = async () => {
-      const selectedSongIds = JSON.parse(localStorage.getItem('selectedSongIds') || '[]');
-      if (selectedSongIds.length === 0) {
-        setError('Nenhuma música selecionada. Volte para escolher suas favoritas.');
+    const carregarMusicas = async () => {
+      const anos = JSON.parse(localStorage.getItem('anosSelecionados') || '[]');
+      if (anos.length === 0) {
+        setErro('Nenhuma música selecionada.');
         setLoading(false);
         return;
       }
 
-      try {  
-        const tokenResponse = await fetch('https://divebackintime.onrender.com/api/token');
-        if (!tokenResponse.ok) throw new Error('Erro ao obter o token');
-        const { access_token } = await tokenResponse.json();
+      try {
+        const respostas = await Promise.all(
+          anos.map(async (ano) => {
+            const res = await fetch(`https://divebackintime.onrender.com/api/year?year=${ano}`, {
+              method: 'GET',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' }
+            });
 
-        const params = new URLSearchParams();
-        selectedSongIds.forEach(id => params.append('song_ids', id));
+            if (!res.ok) throw new Error(`Erro ao buscar músicas do ano ${ano}`);
+            const data = await res.json();
 
-        const res = await fetch(`https://backend-divebackintime.onrender.com/playlist-details?${params.toString()}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
+            return {
+              ano,
+              ...data[ano] // pega a entrada específica do ano
+            };
+          })
+        );
 
-        if (!res.ok) {
-          throw new Error('Erro ao buscar detalhes das músicas selecionadas.');
-        }
-
-        const data = await res.json();
-        setSelectedSongsDetails(data);
+        setMusicasSelecionadas(respostas);
       } catch (err) {
-        console.error("Erro ao carregar detalhes das músicas:", err);
-        setError("Não foi possível carregar os detalhes das músicas. Tente novamente.");
-        setSelectedSongsDetails([]);
+        console.error(err);
+        setErro('Erro ao carregar músicas.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSelectedSongs();
-  }, [navigate]);
+    carregarMusicas();
+  }, []);
 
-  const handleCreatePlaylistOnSpotify = async () => {
-    if (selectedSongsDetails.length === 0) {
-      setError('Músicas não disponíveis para criar a playlist.');
-      return;
-    }
-
+  const handleConfirmar = async () => {
     try {
-      const tokenResponse = await fetch('https://divebackintime.onrender.com/api/token');
-      if (!tokenResponse.ok) throw new Error('Erro ao obter o token');
-      const { access_token } = await tokenResponse.json();
-
-      const years = selectedSongsDetails.map(song => song.year);
-      const songUris = selectedSongsDetails.map(song => song.uri);
-
-      const params = new URLSearchParams();
-      years.forEach(year => params.append('years', year));
-      songUris.forEach(uri => params.append('song_uris', uri));
-
-      const response = await fetch(`https://divebackintime.onrender.com/api/playlist?${params.toString()}`, {
-        method: 'GET',
+      const anos = musicasSelecionadas.map(m => m.ano);
+      const res = await fetch('https://divebackintime.onrender.com/api/playlist', {
+        method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ years: anos })
       });
 
-      if (response.ok) {
-        console.log('Playlist criada com sucesso no Spotify!');
-        setPlaylistCreated(true);
-        localStorage.removeItem('selectedSongIds');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Erro ao criar playlist no Spotify.');
-        console.error('Erro ao criar playlist:', errorData);
-      }
+      if (!res.ok) throw new Error('Erro ao criar playlist');
+      setPlaylistCriada(true);
+      localStorage.removeItem('anosSelecionados');
     } catch (err) {
-      console.error('Erro na requisição para criar playlist:', err);
-      setError('Erro na conexão com o servidor ao tentar criar a playlist.');
+      console.error(err);
+      setErro('Erro ao enviar playlist para o Spotify.');
     }
   };
 
@@ -105,32 +86,31 @@ function ConfirmarPlaylist() {
         <img src={discoIcon} alt="Disco" className="h-16 w-16" />
         <h1 className="text-white text-5xl font-title font-bold">Confirme sua Playlist</h1>
         <p className="text-lg max-w-md">
-          Revise as músicas selecionadas antes de criar <br />
-          sua playlist "Dive Back in Time"
+          Revise as músicas selecionadas antes de criar sua playlist "Dive Back in Time"
         </p>
 
         <div className="bg-spotifyYellow text-black p-6 rounded-3xl shadow-md w-full max-w-md text-left mt-4">
           <h2 className="text-xl font-extrabold">Sua playlist Nostálgica</h2>
           {loading ? (
             <p className="text-center text-gray-700">Carregando músicas...</p>
-          ) : error ? (
-            <p className="text-center text-red-600">{error}</p>
-          ) : selectedSongsDetails.length === 0 ? (
+          ) : erro ? (
+            <p className="text-center text-red-600">{erro}</p>
+          ) : musicasSelecionadas.length === 0 ? (
             <p className="text-center text-gray-700">Nenhuma música para exibir.</p>
           ) : (
             <>
-              <span className="text-sm ml-2">{selectedSongsDetails.length} músicas</span>
+              <span className="text-sm ml-2">{musicasSelecionadas.length} músicas</span>
               <div className="mt-4 space-y-3">
-                {selectedSongsDetails.map((song) => (
-                  <div key={song.id} className="flex justify-between items-center bg-yellow-300 rounded-full px-4 py-2">
+                {musicasSelecionadas.map((m) => (
+                  <div key={m.ano} className="flex justify-between items-center bg-yellow-300 rounded-full px-4 py-2">
                     <div className="flex items-center gap-3">
-                      <img src={discoIcon} alt="Disco" className="h-6 w-6" />
+                      <img src={m.song_img} alt="Disco" className="h-6 w-6 rounded-full" />
                       <div>
-                        <p className="text-sm font-medium">{song.title}</p>
-                        <p className="text-xs text-black/80">{song.artist}</p>
+                        <p className="text-sm font-medium">{m.song_name}</p>
+                        <p className="text-xs text-black/80">{m.artist_name}</p>
                       </div>
                     </div>
-                    <span className="text-sm bg-yellow-500 rounded-full px-2 py-1">{song.year}</span>
+                    <span className="text-sm bg-yellow-500 rounded-full px-2 py-1">{m.ano}</span>
                   </div>
                 ))}
               </div>
@@ -138,15 +118,15 @@ function ConfirmarPlaylist() {
           )}
         </div>
 
-        {playlistCreated ? (
+        {playlistCriada ? (
           <p className="text-green-400 font-bold mt-4">Playlist criada com sucesso no Spotify!</p>
         ) : (
           <div className="flex gap-4 mt-6">
-            <button 
-              onClick={handleCreatePlaylistOnSpotify} 
-              disabled={loading || selectedSongsDetails.length === 0}
+            <button
+              onClick={handleConfirmar}
+              disabled={loading || musicasSelecionadas.length === 0}
               className={`bg-spotifyYellow text-black font-bold px-6 py-3 rounded-full flex items-center gap-2 ${
-                loading || selectedSongsDetails.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                loading || musicasSelecionadas.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
               }`}
             >
               Criar playlist no Spotify <img src={sendIcon} alt="Send" className="h-5 w-5" />
