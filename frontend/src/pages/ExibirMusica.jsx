@@ -20,20 +20,32 @@ function ExibirMusica() {
   const [songData, setSongData] = useState(null);
   const intervalRef = useRef(null);
 
-  useEffect(() => {
+  useEffect(() => { 
     const fetchToken = async () => {
-      try {
-        const res = await fetch("https://divebackintime.onrender.com/api/token", {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Falha ao buscar token");
-        const data = await res.json();
-        return data.access_token;
-      } catch (error) {
-        navigate("/");
-        return null;
-      }
-    };
+    // Tenta recuperar do localStorage
+    const localToken = localStorage.getItem("access_token");
+    if (localToken) return localToken;
+
+    // Se não tiver, tenta buscar do servidor
+    try {
+      const res = await fetch("https://divebackintime.onrender.com/api/token", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Falha ao buscar token");
+      const data = await res.json();
+      if (!data.access_token) throw new Error("Token inválido");
+    
+      // Salva no localStorage para evitar nova requisição
+      localStorage.setItem("access_token", data.access_token);
+
+      return data.access_token;
+    } catch (error) {
+      console.error("Erro ao buscar token:", error);
+      navigate("/");
+      return null;
+    }
+  };
+
 
     const sendDeviceIdToBackend = async (device_id) => {
       try {
