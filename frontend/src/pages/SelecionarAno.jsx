@@ -90,6 +90,7 @@ const SelecionarAno = () => {
           />
 
           <button
+            type="button"
             onClick={enviarAno}
             className="mt-2 w-48 px-4 py-2 rounded-full bg-[#FFD400] text-black font-semibold hover:opacity-90"
           >
