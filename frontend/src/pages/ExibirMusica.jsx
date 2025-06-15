@@ -140,7 +140,7 @@ function ExibirMusica() {
         const newTokenInfo = await fetchOrRefreshToken();
         if (newTokenInfo) {
           console.log("Token renovado, tentando reconectar o player...");
-          navigate("/selecionar", { state: { birthYear: currentYear } });
+          return;
         } else {
           console.error(
             "Falha ao renovar token após erro de autenticação. Redirecionando para login."
