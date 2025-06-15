@@ -179,6 +179,37 @@ function ExibirMusica() {
   }, [navigate, player, tokenInfo]); 
 
   useEffect(() => {
+  const transferPlayback = async () => {
+    if (!deviceId || !tokenInfo) return;
+
+    console.log("Transferindo reprodução para o device_id:", deviceId);
+    try {
+      const res = await fetch("https://api.spotify.com/v1/me/player", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${tokenInfo.access_token}`,
+        },
+        body: JSON.stringify({
+          device_ids: [deviceId],
+          play: true,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("Erro ao transferir reprodução:", await res.text());
+      } else {
+        console.log("Reprodução transferida com sucesso.");
+      }
+    } catch (error) {
+      console.error("Erro ao transferir reprodução:", error);
+    }
+  };
+
+  transferPlayback();
+}, [deviceId, tokenInfo]);
+
+  useEffect(() => {
     if (!deviceId || !tokenInfo) return;
 
     const fetchSong = async () => {
