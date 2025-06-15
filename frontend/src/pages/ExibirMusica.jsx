@@ -199,10 +199,23 @@ function ExibirMusica() {
           }
           throw new Error("Erro ao buscar música");
         }
-        const data = await res.json();
-        setSongData(data);
-        setDuration(Math.floor(data.track_duration / 1000));
-        setProgress(0);
+
+        const allYearsData = await res.json();
+        const songForCurrentYear = allYearsData[String(currentYear)];
+
+        if (songForCurrentYear) {
+          setSongData(songForCurrentYear);
+          setDuration(Math.floor(songForCurrentYear.track_duration / 1000));
+          setProgress(0)
+        }
+        else {
+          console.warn(`Nenhuma música encontrada para o ano ${currentYear}`);
+          setSongData(null);
+          setDuration(180);
+          setProgress(0);
+          setIsPlaying(false);
+        }
+        
       } catch (error) {
         console.error("Erro ao buscar música:", error);
         setSongData(null);
