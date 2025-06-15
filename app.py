@@ -129,7 +129,16 @@ def receive_year():
 def play():
     '''plays the songs starting from the year provided by the user'''
 
-    songs = get_song_id(session.get('year'))
+    year_string = session.get('year')
+    if year_string is None:
+        return jsonify({'error': 'Year not set in session. Please select a year first.'}), 400
+    
+    try:
+        chosen_year = int(year_string)
+    except ValueError:
+        return jsonify({'error': 'Year must be an integer'}), 400
+    
+    songs = get_song_id(chosen_year)
 
     uris_list = [f'spotify:track:{track_id}' for track_id in songs.values()]
     
