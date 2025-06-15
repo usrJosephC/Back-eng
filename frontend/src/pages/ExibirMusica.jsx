@@ -207,6 +207,15 @@ function ExibirMusica() {
           setSongData(songForCurrentYear);
           setDuration(Math.floor(songForCurrentYear.track_duration / 1000));
           setProgress(0)
+
+          console.log("Música encontrada. Tentando reprodução automática...");
+          const playSuccess = await postToBackend("play");
+          if (playSuccess) {
+            setIsPlaying(true);
+            console.log("Reprodução automática iniciada.");
+          } else {
+            console.warn("Falha ao iniciar reprodução automática.");
+          }
         }
         else {
           console.warn(`Nenhuma música encontrada para o ano ${currentYear}`);
@@ -215,7 +224,7 @@ function ExibirMusica() {
           setProgress(0);
           setIsPlaying(false);
         }
-        
+
       } catch (error) {
         console.error("Erro ao buscar música:", error);
         setSongData(null);
