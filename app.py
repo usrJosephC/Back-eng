@@ -57,6 +57,11 @@ def status():
     '''returns a simple status message to check if the server is running'''
     return jsonify({'status': 'Server is running'}), 200
 
+@app.route('/favicon.ico')
+def favicon():
+    '''serves a favicon for the app, returns 204 if no favicon is available'''
+    return '', 204  # No Content, since we don't have a favicon
+
 @app.route('/api/login', methods=['GET'])
 def login():
     '''redirects the user to Spotify's authentication page'''
@@ -76,7 +81,7 @@ def callback():
     session['token_info'] = token_info
 
     # redirect to the frontend after successful authentication
-    return redirect('https://divebackintime.onrender.com/#/selecionar')
+    return redirect('/#/selecionar')
     
 @app.route('/api/token', methods=['GET'])
 def send_token():
@@ -118,34 +123,23 @@ def receive_year():
     if not (1946 <= year_int <= 2024):
         raise ValueError('Year must be between 1946 and 2024')
 
-    token_info = session.get('token_info')
-    if not token_info:
-        return jsonify({'error': 'User not authenticated. Please log in.'}), 401
-
-    _, new_token_info = spotify_client(token_info)
-    session['token_info'] = new_token_info
-
     result = get_info(year_int)
-    session['year'] = year_int
     return jsonify(result)
 
-@app.route('/api/play', methods=['GET'])
+@app.route('/api/play', methods=['POST'])
 def play():
-    '''plays the songs starting from the year provided by the user'''
-    print(f'DEBUG: {session}')
+    '''receives the year from the frontend and plays the songs from that year on the user's device'''
+    data = request.get_json()
+    if not data or 'year' not in data:
+        return jsonify({'error': 'Year not provided in request body'}), 400
 
-    year_string = session.get('year')
-    if year_string is None:
-        raise ValueError('Year not set in session. Please select a year first.')
-    
     try:
-        chosen_year = int(year_string)
+        chosen_year = int(data['year'])
     except ValueError:
         return jsonify({'error': 'Year must be an integer'}), 400
-    
+
     uris_list = get_song_id(chosen_year)
-    
-    # default code block to guarantee that the user is authenticated
+
     token_info = session.get('token_info')
     if not token_info:
         return jsonify({'error': 'User not authenticated. Please log in.'}), 401
@@ -156,11 +150,11 @@ def play():
     device_id = session.get('device_id')
     if not device_id:
         return jsonify({'error': 'Device ID not set. Please set the device ID first.'}), 400
-    # device_id = get_device_id(sp_client)
 
     play_music(sp_client, uris_list, device_id)
+    print(f'DEBUG: Playing music on device {device_id} with URIs: {uris_list}')
     return jsonify({'message': 'Music is playing!'}), 200
-    
+
 @app.route('/api/previous', methods=['GET'])
 def previous():
     '''skips to the previous song in the list'''

@@ -121,6 +121,8 @@ function ExibirMusica() {
         volume: 0.5,
       });
 
+      playerRef.current = spotifyPlayer;
+
       setPlayer(spotifyPlayer);
 
       spotifyPlayer.addListener("ready", async ({ device_id }) => {
