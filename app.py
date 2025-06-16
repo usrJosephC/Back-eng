@@ -141,8 +141,7 @@ def play():
     except ValueError:
         return jsonify({'error': 'Year must be an integer'}), 400
     
-    songs = get_song_id(chosen_year)
-    uris_list = [f'spotify:track:{track_id}' for track_id in songs.values()]
+    uris_list = get_song_id(chosen_year)
     
     # default code block to guarantee that the user is authenticated
     token_info = session.get('token_info')
