@@ -9,4 +9,4 @@ def get_song_id(year: int):
     if not filtered_table['URI']:
         return []
 
-    return filtered_table['URI']
+    return list(filtered_table['URI'])

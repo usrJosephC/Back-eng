@@ -100,6 +100,7 @@ def receive_device_id():
     
     # save the device ID in the session
     session['device_id'] = device_id
+    print(f'DEBUG: Device ID stored in session: {device_id}')
     return jsonify({'message': 'Device ID stored successfully'}), 200
 
 @app.route('/api/year', methods=['GET'])
