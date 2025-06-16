@@ -1,10 +1,11 @@
 import spotipy
 
 class SpotifyPauseError(Exception):
-    '''Custom exception for Spotify pause errors'''
+    '''custom exception for Spotify pause errors'''
 
 def pause_music(sp, device_id: str):
     '''pause the music on the Spotify device'''
+    
     if not device_id:
         print("DEBUG: pause_music - missing device ID, cannot pause.")
         raise ValueError("No device ID found to pause playback.")

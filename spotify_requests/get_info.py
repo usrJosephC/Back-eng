@@ -1,7 +1,7 @@
 from table.table import filter_by_year
 
 def get_info(chosen_year: int):
-    '''Returns a dictionary with the song information starting from the year
+    '''returns a dictionary with the song information starting from the year
     provided by the user, using data from the local CSV table.'''
 
     info = {}

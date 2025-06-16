@@ -1,10 +1,11 @@
 import spotipy
 
 class SpotifyAPIError(Exception):
-    """Custom exception for general Spotify API errors."""
+    """custom exception for general Spotify API errors."""
 
 def create_playlist(sp, playlist_name: str, song_uris: list[str]):
-    '''Creates a playlist with the given name and adds the provided songs.'''    
+    '''creates a playlist with the given name and adds the provided songs.''' 
+       
     if not playlist_name:
         print("DEBUG: create_playlist - Playlist name is missing.")
         raise ValueError("Playlist name must be provided.")

@@ -1,10 +1,11 @@
 import spotipy
 
 class SpotifyPlaybackError(Exception):
-    """Custom exception for Spotify playback errors."""
+    """custom exception for Spotify playback errors."""
 
 def next_track(sp, device_id: str):
-    '''Skips to the next track on the given Spotify device.'''
+    '''skips to the next track on the given Spotify device.'''
+    
     if not device_id:
         print("DEBUG: next_track - Missing device ID.")
         raise ValueError("No device ID provided to skip to next track.")
