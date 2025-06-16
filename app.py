@@ -131,6 +131,7 @@ def receive_year():
 @app.route('/api/play', methods=['GET'])
 def play():
     '''plays the songs starting from the year provided by the user'''
+    print(f'DEBUG: {session}')
 
     year_string = session.get('year')
     if year_string is None:
@@ -152,6 +153,8 @@ def play():
     session['token_info'] = new_token_info
 
     device_id = session.get('device_id')
+    if not device_id:
+        return jsonify({'error': 'Device ID not set. Please set the device ID first.'}), 400
     # device_id = get_device_id(sp_client)
 
     play_music(sp_client, uris_list, device_id)
@@ -170,6 +173,8 @@ def previous():
     session['token_info'] = new_token_info
 
     device_id = session.get('device_id')
+    if not device_id:
+        return jsonify({'error': 'Device ID not set. Please set the device ID first.'}), 400
     # device_id = get_device_id(sp_client)
   
     previous_track(sp_client, device_id)
@@ -188,6 +193,8 @@ def pause():
     session['token_info'] = new_token_info
 
     device_id = session.get('device_id')
+    if not device_id:
+        return jsonify({'error': 'Device ID not set. Please set the device ID first.'}), 400
     # device_id = get_device_id(sp_client)
     
     pause_music(sp_client, device_id)
@@ -206,6 +213,8 @@ def play_next():
     session['token_info'] = new_token_info
 
     device_id = session.get('device_id')
+    if not device_id:
+        return jsonify({'error': 'Device ID not set. Please set the device ID first.'}), 400
     # device_id = get_device_id(sp_client)
 
     next_track(sp_client, device_id)
