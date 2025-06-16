@@ -239,4 +239,4 @@ def make_playlist():
     return jsonify({'message': 'Playlist created successfully'}), 201
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
