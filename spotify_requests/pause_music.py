@@ -1,25 +1,33 @@
 import spotipy
 
+class SpotifyPauseError(Exception):
+    '''custom exception for Spotify pause errors'''
+
 def pause_music(sp, device_id: str):
     '''pause the music on the Spotify device'''
+    
     if not device_id:
-        print("DEBUG: pause_music - Device ID is missing, cannot pause playback.")
+        print("DEBUG: pause_music - missing device ID, cannot pause.")
         raise ValueError("No device ID found to pause playback.")
 
     try:
-        print(f"DEBUG: pause_music - Attempting to pause playback on device_id: {device_id}")
+        print(f"DEBUG: pause_music - pausing playback on device_id: {device_id}")
         sp.pause_playback(device_id=device_id)
-        print("DEBUG: pause_music - sp.pause_playback() called successfully.")
+
     except spotipy.SpotifyException as e:
-        print(f"ERROR: pause_music - Spotify API error during pause: {e}")
+        print(f"ERROR: pause_music - Spotify API error: {e}")
+
         if e.http_status == 403:
-            print("ERROR: pause_music - Check Spotify scopes (user-modify-playback-state) or Premium status.")
-            raise Exception(f"Spotify API Forbidden (403): {e.reason}")
+            print("ERROR: pause_music - Check scopes or Premium status.")
+            raise SpotifyPauseError(f"Forbidden (403): {e.reason}") from e
+        
         elif e.http_status == 404:
-            print("ERROR: pause_music - Device not found or not active for playback.")
-            raise Exception(f"Spotify API Not Found (404): {e.reason}")
+            print("ERROR: pause_music - Device not found or inactive.")
+            raise SpotifyPauseError(f"Not Found (404): {e.reason}") from e
+        
         else:
-            raise Exception(f"Spotify API Error: {e.http_status} - {e.reason}")
+            raise SpotifyPauseError(f"Spotify API error {e.http_status}: {e.reason}") from e
+        
     except Exception as e:
-        print(f"ERROR: pause_music - An unexpected error occurred: {e}")
-        raise Exception(f"Unexpected error during pause: {e}")
+        print(f"ERROR: pause_music - Unexpected error: {e}")
+        raise SpotifyPauseError(f"Unexpected error during pause: {e}") from e
