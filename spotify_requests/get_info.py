@@ -1,28 +1,23 @@
 from table.table import filter_by_year
 
-def get_info(sp, year: int):
-    '''returns a dictionary with the song information starting from the year
-     provided by the user.'''
+def get_info(year: int):
+    '''Returns a dictionary with the song information starting from the year
+    provided by the user, using data from the local CSV table.'''
 
     info = {}
     filtered_table = filter_by_year(year)
-    year = int(filtered_table['YEAR'][0])
-
-    for uri in filtered_table['URI']:
-        track = sp.track(uri)
-
-        artist_name = track['artists'][0]['name']
-        song_name = track['name']
-        song_img = track['album']['images'][0]['url']
-        track_duration = track['duration_ms']
-
-        info[year] = {
-            'artist_name': artist_name,
-            'song_name': song_name,
-            'song_img': song_img,
-            'track_duration': track_duration,
+    year_list = filtered_table['YEAR']
+    song_list = filtered_table['SONG']
+    artist_list = filtered_table['ARTIST']
+    song_img_list = filtered_table['SONG_IMG']
+    track_duration_list = filtered_table['TRACK_DURATION']
+    
+    for i, year in enumerate(year_list):
+        info[int(year)] = {
+            'song_name': song_list[i],
+            'artist_name': artist_list[i],
+            'track_duration': track_duration_list[i],
+            'song_img': song_img_list[i],
         }
-
-        year += 1
 
     return info
