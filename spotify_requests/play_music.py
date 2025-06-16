@@ -2,7 +2,6 @@ import spotipy
 
 class SpotifyPlaybackError(Exception):
     """Custom exception for Spotify playback errors."""
-    pass
 
 def play_music(sp, uris: list[str], device_id: str):
     '''Plays music on the given Spotify device using the specified URIs.'''
