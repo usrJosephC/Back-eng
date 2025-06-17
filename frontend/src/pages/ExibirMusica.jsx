@@ -121,8 +121,6 @@ function ExibirMusica() {
         volume: 0.5,
       });
 
-      playerRef.current = spotifyPlayer;
-
       setPlayer(spotifyPlayer);
 
       spotifyPlayer.addListener("ready", async ({ device_id }) => {
@@ -242,7 +240,7 @@ function ExibirMusica() {
           setProgress(0)
 
           console.log("Música encontrada. Tentando reprodução automática...");
-          const playSuccess = await postToBackend("play");
+          const playSuccess = await postToBackend("play", 'POST', { year: currentYear });
           if (playSuccess) {
             setIsPlaying(true);
             console.log("Reprodução automática iniciada.");
@@ -296,7 +294,7 @@ function ExibirMusica() {
 
   const IrParaCriar = () => navigate("/criar");
 
-  const postToBackend = async (endpoint) => {
+  const postToBackend = async (endpoint, method = 'GET', body = null) => {
     if (!deviceId || !tokenInfo) {
         console.warn("Player ou token não estão prontos para enviar requisição ao backend.");
         return false;
@@ -306,8 +304,10 @@ function ExibirMusica() {
       const res = await fetch(
         `https://divebackintime.onrender.com/api/${endpoint}`,
         {
-          method: "GET",
+          method,
           credentials: "include",
+          headers: method === 'POST' ? { "Content-Type": "application/json" } : {},
+          body: body ? JSON.stringify(body) : null,
         }
       );
       if (!res.ok) {
@@ -332,7 +332,11 @@ function ExibirMusica() {
 
   const handlePlayPause = async () => {
     if (!songData) return;
-    const success = await postToBackend(isPlaying ? "pause" : "play");
+    const success = await postToBackend(
+      isPlaying ? "pause" : "play", 
+      'POST', 
+      isPlaying ? null: { year: currentYear }
+    );
     if (success) setIsPlaying((v) => !v);
   };
 
