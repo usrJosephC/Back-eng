@@ -295,46 +295,52 @@ function ExibirMusica() {
   const IrParaCriar = () => navigate("/criar");
 
   const postToBackend = async (endpoint, method = 'GET', body = null) => {
-    if (!deviceId || !tokenInfo) {
-        console.warn("Player ou token não estão prontos para enviar requisição ao backend.");
-        return false;
+  if (!deviceId || !tokenInfo) {
+    console.warn("Player ou token não estão prontos para enviar requisição ao backend.");
+    return false;
+  }
+
+  try {
+    console.log(`Enviando requisição para /api/${endpoint}`);
+
+    const fetchOptions = {
+      method,
+      credentials: "include",
+      headers: method === 'POST' ? { "Content-Type": "application/json" } : {},
+    };
+
+    if (method === 'POST' && body) {
+      fetchOptions.body = JSON.stringify(body);
     }
-    try {
-      console.log(`Enviando requisição para /api/${endpoint}`);
-      const res = await fetch(
-        `https://divebackintime.onrender.com/api/${endpoint}`,
-        {
-          method,
-          credentials: "include",
-          headers: method === 'POST' ? { "Content-Type": "application/json" } : {},
-          body: body ? JSON.stringify(body) : null,
-        }
-      );
-      if (!res.ok) {
-        if (res.status === 401) {
-          console.error(
-            `Erro 401 na requisição /api/${endpoint}, token provavelmente expirado. Forçando re-autenticação.`
-          );
-          localStorage.removeItem("token_info");
-          navigate("/");
-          return false;
-        }
-        console.error(`Falha na requisição /api/${endpoint}`);
+
+    const res = await fetch(`https://divebackintime.onrender.com/api/${endpoint}`, fetchOptions);
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        console.error(
+          `Erro 401 na requisição /api/${endpoint}, token provavelmente expirado. Forçando re-autenticação.`
+        );
+        localStorage.removeItem("token_info");
+        navigate("/");
         return false;
       }
-      console.log(`Requisição /api/${endpoint} bem-sucedida`);
-      return true;
-    } catch (error) {
-      console.error(`Erro na requisição /api/${endpoint}:`, error);
+      console.error(`Falha na requisição /api/${endpoint}`);
       return false;
     }
-  };
+
+    console.log(`Requisição /api/${endpoint} bem-sucedida`);
+    return true;
+  } catch (error) {
+    console.error(`Erro na requisição /api/${endpoint}:`, error);
+    return false;
+  }
+};
 
   const handlePlayPause = async () => {
     if (!songData) return;
     const success = await postToBackend(
       isPlaying ? "pause" : "play", 
-      'POST', 
+      isPlaying ? 'GET' : 'POST',
       isPlaying ? null: { year: currentYear }
     );
     if (success) setIsPlaying((v) => !v);
